@@ -342,12 +342,12 @@ void handleNext(uDataParams_t a_sParams)
 
     if(0 != g_psCurrentPlayList && (g_u64CurrentPlaylistIndex + 1) < g_u64CurrentPlaylistSize)
     {
-        gst_pl_selectTrack(g_psCurrentPlayList[++g_u64CurrentPlaylistIndex].m_pcName);
+        gst_pl_selectTrack(g_psCurrentPlayList[++g_u64CurrentPlaylistIndex].m_pcFullName);
         handlePlay(a_sParams);
     }
     else if (0 != g_psCurrentPlayList && (g_u64CurrentPlaylistIndex + 1) >= g_u64CurrentPlaylistSize)
     {
-        gst_pl_selectTrack(g_psCurrentPlayList[0].m_pcName);
+        gst_pl_selectTrack(g_psCurrentPlayList[0].m_pcFullName);
         g_u64CurrentPlaylistIndex = 0;
         handlePlay(a_sParams);
     }
@@ -363,12 +363,12 @@ void handlePrev(uDataParams_t a_sParams)
 
     if(0 != g_psCurrentPlayList && g_u64CurrentPlaylistIndex < g_u64CurrentPlaylistSize && (g_u64CurrentPlaylistIndex -1) < g_u64CurrentPlaylistSize)
     {
-        gst_pl_selectTrack(g_psCurrentPlayList[--g_u64CurrentPlaylistIndex].m_pcName);
+        gst_pl_selectTrack(g_psCurrentPlayList[--g_u64CurrentPlaylistIndex].m_pcFullName);
         handlePlay(a_sParams);
     }
     else if (0 != g_psCurrentPlayList && g_u64CurrentPlaylistIndex < g_u64CurrentPlaylistSize)
     {
-        gst_pl_selectTrack(g_psCurrentPlayList[g_u64CurrentPlaylistSize - 1].m_pcName);
+        gst_pl_selectTrack(g_psCurrentPlayList[g_u64CurrentPlaylistSize - 1].m_pcFullName);
         g_u64CurrentPlaylistIndex = g_u64CurrentPlaylistSize - 1;
         handlePlay(a_sParams);
     }
@@ -484,13 +484,13 @@ void handleSetTrackWithIndex(uDataParams_t a_sParams)
 
     if(0 != g_psCurrentPlayList && a_sParams.u64Param < g_u64CurrentPlaylistSize)
     {
-        gst_pl_selectTrack(g_psCurrentPlayList[a_sParams.u64Param].m_pcName);
+        gst_pl_selectTrack(g_psCurrentPlayList[a_sParams.u64Param].m_pcFullName);
         g_u64CurrentPlaylistIndex = a_sParams.u64Param;
 
     }
     else if (0 != g_psCurrentPlayList && a_sParams.u64Param >= g_u64CurrentPlaylistSize)
     {
-        gst_pl_selectTrack(g_psCurrentPlayList[0].m_pcName);
+        gst_pl_selectTrack(g_psCurrentPlayList[0].m_pcFullName);
         g_u64CurrentPlaylistIndex = 0;
     }
     else

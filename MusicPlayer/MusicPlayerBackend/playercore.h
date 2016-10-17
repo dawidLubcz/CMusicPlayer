@@ -25,10 +25,12 @@ typedef struct
 }pl_core_ID3v1;
 
 #define PL_CORE_ID3v1_INITIALIZER {{0},{0},{0},{0},{0},{0},'\0'}
+#define PL_CORE_FILE_NAME_SIZE 512
 
 typedef struct
 {
-    char m_pcName[256];
+    char m_pcFullName[PL_CORE_FILE_NAME_SIZE];
+    char m_pcName[PL_CORE_FILE_NAME_SIZE/2];
     eExtension m_eExtension;
     pl_core_ID3v1 m_sTrackInfo;
 }pl_core_MediaFileStruct;

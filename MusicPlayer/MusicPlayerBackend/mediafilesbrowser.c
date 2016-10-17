@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #undef PRINT_PREFIX
 #define PRINT_PREFIX "MP:Browser: "
@@ -82,7 +83,14 @@ eUSBErrorCode getFilesInCurrentDir(pl_core_MediaFileStruct *a_psMediaFilesArray,
                 memset(&sFile, '\0', sizeof(pl_core_MediaFileStruct));
 
                 // set filename
-                strcpy((char*)&sFile.m_pcName, psDirectoryContent->d_name);
+                char pcCurrentPath[PL_CORE_FILE_NAME_SIZE];
+                memset(pcCurrentPath, '\0', PL_CORE_FILE_NAME_SIZE);
+                getcwd(pcCurrentPath, PL_CORE_FILE_NAME_SIZE);
+                strcat(pcCurrentPath, "/");
+                strcat(pcCurrentPath, psDirectoryContent->d_name);
+
+                strcpy(sFile.m_pcFullName, pcCurrentPath);
+                strcpy(sFile.m_pcName, psDirectoryContent->d_name);
                 sFile.m_eExtension = a_eExt;
 
                 // get track info if available
@@ -246,11 +254,11 @@ static void getID3v2Tag(char* a_pcFileName)
 
             if(0 == strcmp("TLEN",sFrame.caFrameID))
             {
-                PRINT_INF("getID3v2Tag(), found TLEN");
+                //PRINT_INF("getID3v2Tag(), found TLEN");
             }
             else if(strlen(sFrame.caFrameID)>2)
             {
-                PRINT_INF("getID3v2Tag(), found HEADER: %s", sFrame.caFrameID);
+                //PRINT_INF("getID3v2Tag(), found HEADER: %s", sFrame.caFrameID);
             }
             u32BytesLeft -= u32FrameSize + 10;
         }
