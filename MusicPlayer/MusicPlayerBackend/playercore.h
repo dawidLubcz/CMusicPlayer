@@ -68,10 +68,6 @@ void pl_core_cleanMemory();
 void pl_core_registerListener(pl_core_listenerInterface *a_psInterface);
 void pl_core_deregisterListener(pl_core_listenerInterface *a_psInterface);
 
-//temporary
-void gst_init_play();
-void gst_deinit_stop();
-
 //////////// IPC INTERFACE ///////////////
 typedef enum
 {

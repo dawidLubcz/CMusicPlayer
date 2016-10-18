@@ -69,7 +69,9 @@ static void handleMp3PlaylistCreate(uDataParams_t a_sParams);
 static void handleSetTrackWithIndex(uDataParams_t a_sParams);
 static void handleQueueExit(uDataParams_t a_sParams);
 
-handlerPointer g_apHandlersArray[E_MAX] =
+static void handleEndOfStream(void);
+
+handlerPointer g_apAPIHandlersArray[E_MAX] =
 {
     handlePlay,     // PLAY
     handleStop,     // STOP
@@ -98,11 +100,20 @@ void pl_core_cleanMemory()
     g_u64CurrentPlaylistSize = 0;
 }
 
+void initializeGstObserver()
+{
+    gst_pl_sListenerInterface oInterface;
+    oInterface.m_pfEndOfStreamHandler = handleEndOfStream;
+    gst_pl_setListenerFunctions(oInterface);
+}
+
 E_ERROR_CODE pl_core_initialize()
 {
     E_ERROR_CODE eResult = ERR_OK;
 
     gst_pl_Initialize();
+    initializeGstObserver();
+
     g_psAsyncInterfaceQueue = g_async_queue_new ();
 
     if(ERR_OK == eResult) g_u8Initialized = TRUE;
@@ -245,7 +256,7 @@ void *threadQueue(void *arg)
         }
 
         sData_t sMsg = *((sData_t*)g_async_queue_pop(g_psAsyncInterfaceQueue)); // blocking
-        g_apHandlersArray[sMsg.eCommand](sMsg.uParam);
+        g_apAPIHandlersArray[sMsg.eCommand](sMsg.uParam);
 
         if(QUEUE_EXIT == sMsg.uParam.i32Param)
         {
@@ -278,7 +289,7 @@ void *threadIPC(void *arg)
             if(E_PLAY <= sMsg.mmsg.eCommand &&
                E_MAX  >  sMsg.mmsg.eCommand   )
             {
-                g_apHandlersArray[sMsg.mmsg.eCommand](sMsg.mmsg.uParam);
+                g_apAPIHandlersArray[sMsg.mmsg.eCommand](sMsg.mmsg.uParam);
             }
             else
             {
@@ -411,6 +422,14 @@ void handleSetVol(uDataParams_t a_sParams)
     PRINT_INF("handleSetVol()");
 
     gst_pl_SetVol(a_sParams.i32Param);
+}
+
+void handleEndOfStream(void)
+{
+    PRINT_INF("handleEndOfStream()");
+
+    uDataParams_t sParams = {0};
+    handleNext(sParams);
 }
 
 void notifyListenersListReady(uint64_t a_u64Count)
