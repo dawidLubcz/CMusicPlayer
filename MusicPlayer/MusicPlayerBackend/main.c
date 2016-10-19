@@ -41,7 +41,7 @@ int main()
     int iOption = 0;
     do
     {
-        printf("Choose an option:\n 0->PLAY\n1->STOP\n2->PAUSE\n3->NEXT\n4->PREV\n5->SET_TRACK\n6->UNLOAD\n-1->QUIT\n7->Vol Up\n8->Vol Down\n9->SetVol\n10->List files\n11->List MP3\n12->set track with index\n13->set time position\n");
+        printf("Choose an option:\n 0->PLAY\n1->STOP\n2->PAUSE\n3->NEXT\n4->PREV\n5->SET_TRACK\n6->UNLOAD\n-1->QUIT\n7->Vol Up\n8->Vol Down\n9->SetVol\n10->List files\n11->List MP3\n12->set track with index\n13->set time position\n14->repeat ALL\n15->repeat ONE\n");
         scanf("%d", &iOption);
 
         switch(iOption)
@@ -127,6 +127,16 @@ int main()
             scanf("%u",&vol);
 
             pl_core_setTimePos(vol);
+        }break;
+
+        case 14:
+        {
+            pl_core_setRepeat(E_REPEAT_ALL);
+        }break;
+
+        case 15:
+        {
+            pl_core_setRepeat(E_REPEAT_ONE);
         }break;
 
         case -1:

@@ -24,6 +24,18 @@
 
 typedef void (*handlerPointer)(uDataParams_t);
 
+typedef struct _sCurrentPlaylist
+{
+    pl_core_MediaFileStruct* m_psCurrentPlayList;
+    uint64_t m_u64CurrentPlaylistSize;
+    uint64_t m_u64CurrentPlaylistIndex;
+}sCurrentPlaylist;
+
+typedef struct _sPlaybackOptions
+{
+    int32_t m_eRepeat;
+}sPlaybackOptions;
+
 static const char*     g_pcMsqQueueFile    = "msgQueueFile";
 static char            g_cProjectID        = 'D' | 'L';
 static int32_t         g_i32MsgQueueID     = 0;
@@ -36,9 +48,8 @@ static GAsyncQueue*    g_psAsyncInterfaceQueue  = 0;
 static GList*          g_psListenersList        = 0;
 static pthread_mutex_t g_sPlayerQueueMutex = PTHREAD_MUTEX_INITIALIZER;
 
-static pl_core_MediaFileStruct* g_psCurrentPlayList = 0;
-static uint64_t g_u64CurrentPlaylistSize  = 0;
-static uint64_t g_u64CurrentPlaylistIndex = 0;
+static sCurrentPlaylist g_oCurrentPlaylist = {0};
+static sPlaybackOptions g_oPlaybackOptions = {E_REPEAT_ALL};
 
 /// private functions
 static E_ERROR_CODE appCoreInitQueue();
@@ -92,12 +103,12 @@ handlerPointer g_apAPIHandlersArray[E_MAX] =
 
 void pl_core_cleanMemory()
 {
-    if(0 != g_psCurrentPlayList && 0 < g_u64CurrentPlaylistSize)
+    if(0 != g_oCurrentPlaylist.m_psCurrentPlayList && 0 < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
     {
-        free(g_psCurrentPlayList);
-        g_psCurrentPlayList = 0;
+        free(g_oCurrentPlaylist.m_psCurrentPlayList);
+        g_oCurrentPlaylist.m_psCurrentPlayList= 0;
     }
-    g_u64CurrentPlaylistSize = 0;
+    g_oCurrentPlaylist.m_u64CurrentPlaylistSize = 0;
 }
 
 void initializeGstObserver()
@@ -327,9 +338,9 @@ void handlePlay(uDataParams_t a_sParams)
     PRINT_INF("handlePlay(), %d", a_sParams.i32Param);
 
     gst_pl_play();
-    if(0 < g_u8Initialized && 0 != g_psCurrentPlayList)
+    if(0 < g_u8Initialized && 0 != g_oCurrentPlaylist.m_psCurrentPlayList)
     {
-        notifyListenersTrackInfoReady(g_psCurrentPlayList[g_u64CurrentPlaylistIndex].m_sTrackInfo);
+        notifyListenersTrackInfoReady(g_oCurrentPlaylist.m_psCurrentPlayList[g_oCurrentPlaylist.m_u64CurrentPlaylistIndex].m_sTrackInfo);
     }
 }
 
@@ -351,15 +362,15 @@ void handleNext(uDataParams_t a_sParams)
 {
     PRINT_INF("handleNext(), %d", a_sParams.i32Param);
 
-    if(0 != g_psCurrentPlayList && (g_u64CurrentPlaylistIndex + 1) < g_u64CurrentPlaylistSize)
+    if(0 != g_oCurrentPlaylist.m_psCurrentPlayList && (g_oCurrentPlaylist.m_u64CurrentPlaylistIndex + 1) < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
     {
-        gst_pl_selectTrack(g_psCurrentPlayList[++g_u64CurrentPlaylistIndex].m_pcFullName);
+        gst_pl_selectTrack(g_oCurrentPlaylist.m_psCurrentPlayList[++g_oCurrentPlaylist.m_u64CurrentPlaylistIndex].m_pcFullName);
         handlePlay(a_sParams);
     }
-    else if (0 != g_psCurrentPlayList && (g_u64CurrentPlaylistIndex + 1) >= g_u64CurrentPlaylistSize)
+    else if (0 != g_oCurrentPlaylist.m_psCurrentPlayList && (g_oCurrentPlaylist.m_u64CurrentPlaylistIndex + 1) >= g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
     {
-        gst_pl_selectTrack(g_psCurrentPlayList[0].m_pcFullName);
-        g_u64CurrentPlaylistIndex = 0;
+        gst_pl_selectTrack(g_oCurrentPlaylist.m_psCurrentPlayList[0].m_pcFullName);
+        g_oCurrentPlaylist.m_u64CurrentPlaylistIndex = 0;
         handlePlay(a_sParams);
     }
     else
@@ -372,15 +383,15 @@ void handlePrev(uDataParams_t a_sParams)
 {
     PRINT_INF("handlePrev(), %d", a_sParams.i32Param);
 
-    if(0 != g_psCurrentPlayList && g_u64CurrentPlaylistIndex < g_u64CurrentPlaylistSize && (g_u64CurrentPlaylistIndex -1) < g_u64CurrentPlaylistSize)
+    if(0 != g_oCurrentPlaylist.m_psCurrentPlayList && g_oCurrentPlaylist.m_u64CurrentPlaylistIndex < g_oCurrentPlaylist.m_u64CurrentPlaylistSize && (g_oCurrentPlaylist.m_u64CurrentPlaylistIndex -1) < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
     {
-        gst_pl_selectTrack(g_psCurrentPlayList[--g_u64CurrentPlaylistIndex].m_pcFullName);
+        gst_pl_selectTrack(g_oCurrentPlaylist.m_psCurrentPlayList[--g_oCurrentPlaylist.m_u64CurrentPlaylistIndex].m_pcFullName);
         handlePlay(a_sParams);
     }
-    else if (0 != g_psCurrentPlayList && g_u64CurrentPlaylistIndex < g_u64CurrentPlaylistSize)
+    else if (0 != g_oCurrentPlaylist.m_psCurrentPlayList && g_oCurrentPlaylist.m_u64CurrentPlaylistIndex < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
     {
-        gst_pl_selectTrack(g_psCurrentPlayList[g_u64CurrentPlaylistSize - 1].m_pcFullName);
-        g_u64CurrentPlaylistIndex = g_u64CurrentPlaylistSize - 1;
+        gst_pl_selectTrack(g_oCurrentPlaylist.m_psCurrentPlayList[g_oCurrentPlaylist.m_u64CurrentPlaylistSize - 1].m_pcFullName);
+        g_oCurrentPlaylist.m_u64CurrentPlaylistIndex = g_oCurrentPlaylist.m_u64CurrentPlaylistSize - 1;
         handlePlay(a_sParams);
     }
     else
@@ -426,10 +437,18 @@ void handleSetVol(uDataParams_t a_sParams)
 
 void handleEndOfStream(void)
 {
-    PRINT_INF("handleEndOfStream()");
+    PRINT_INF("handleEndOfStream(), Repeat: %d", g_oPlaybackOptions.m_eRepeat);
 
     uDataParams_t sParams = {0};
-    handleNext(sParams);
+    if(E_REPEAT_ONE == g_oPlaybackOptions.m_eRepeat)
+    {
+        handleStop(sParams);
+        handlePlay(sParams);
+    }
+    else
+    {
+        handleNext(sParams);
+    }
 }
 
 void notifyListenersListReady(uint64_t a_u64Count)
@@ -464,17 +483,17 @@ void handlePlayListCreate(uDataParams_t a_sParams)
 {
     PRINT_INF("handleListFiles(), %d", a_sParams.i32Param);
 
-    if(0 != g_psCurrentPlayList && 0 < g_u64CurrentPlaylistSize)
+    if(0 != g_oCurrentPlaylist.m_psCurrentPlayList && 0 < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
     {
-        free(g_psCurrentPlayList);
-        g_u64CurrentPlaylistSize = 0;
+        free(g_oCurrentPlaylist.m_psCurrentPlayList);
+        g_oCurrentPlaylist.m_u64CurrentPlaylistSize = 0;
     }
 
-    uint64_t u64Count = getFilesCountInCurrDir(0);
-    g_psCurrentPlayList = malloc(u64Count * sizeof(pl_core_MediaFileStruct));
-    getFilesInCurrentDir(g_psCurrentPlayList, u64Count, 0);
+    uint64_t u64Count = getFilesCountInCurrDir(E_EXT_ALL);
+    g_oCurrentPlaylist.m_psCurrentPlayList= malloc(u64Count * sizeof(pl_core_MediaFileStruct));
+    getFilesInCurrentDir(g_oCurrentPlaylist.m_psCurrentPlayList, u64Count, E_EXT_ALL);
 
-    g_u64CurrentPlaylistSize = u64Count;
+    g_oCurrentPlaylist.m_u64CurrentPlaylistSize = u64Count;
     notifyListenersListReady(u64Count);
 }
 
@@ -482,35 +501,35 @@ void handleMp3PlaylistCreate(uDataParams_t a_sParams)
 {
     PRINT_INF("handleListFilesFiltered(), %d", a_sParams.i32Param);
 
-    if(0 != g_psCurrentPlayList && 0 < g_u64CurrentPlaylistSize)
+    if(0 != g_oCurrentPlaylist.m_psCurrentPlayList && 0 < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
     {
-        free(g_psCurrentPlayList);
-        g_u64CurrentPlaylistSize = 0;
+        free(g_oCurrentPlaylist.m_psCurrentPlayList);
+        g_oCurrentPlaylist.m_u64CurrentPlaylistSize = 0;
     }
 
     eExtension eExt = E_EXT_MP3;
     uint64_t u64Count = getFilesCountInCurrDir(eExt);
-    g_psCurrentPlayList = malloc(u64Count * sizeof(pl_core_MediaFileStruct));
-    getFilesInCurrentDir(g_psCurrentPlayList, u64Count, eExt);
+    g_oCurrentPlaylist.m_psCurrentPlayList= malloc(u64Count * sizeof(pl_core_MediaFileStruct));
+    getFilesInCurrentDir(g_oCurrentPlaylist.m_psCurrentPlayList, u64Count, eExt);
 
-    g_u64CurrentPlaylistSize = u64Count;
+    g_oCurrentPlaylist.m_u64CurrentPlaylistSize = u64Count;
     notifyListenersListReady(u64Count);
 }
 
 void handleSetTrackWithIndex(uDataParams_t a_sParams)
 {
-    PRINT_INF("handleSetTrackWithIndex(), index: %lu, pl_size: %u",a_sParams.i32Param, g_u64CurrentPlaylistSize);
+    PRINT_INF("handleSetTrackWithIndex(), index: %lu, pl_size: %u",a_sParams.i32Param, g_oCurrentPlaylist.m_u64CurrentPlaylistSize);
 
-    if(0 != g_psCurrentPlayList && a_sParams.u64Param < g_u64CurrentPlaylistSize)
+    if(0 != g_oCurrentPlaylist.m_psCurrentPlayList && a_sParams.u64Param < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
     {
-        gst_pl_selectTrack(g_psCurrentPlayList[a_sParams.u64Param].m_pcFullName);
-        g_u64CurrentPlaylistIndex = a_sParams.u64Param;
+        gst_pl_selectTrack(g_oCurrentPlaylist.m_psCurrentPlayList[a_sParams.u64Param].m_pcFullName);
+        g_oCurrentPlaylist.m_u64CurrentPlaylistIndex = a_sParams.u64Param;
 
     }
-    else if (0 != g_psCurrentPlayList && a_sParams.u64Param >= g_u64CurrentPlaylistSize)
+    else if (0 != g_oCurrentPlaylist.m_psCurrentPlayList && a_sParams.u64Param >= g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
     {
-        gst_pl_selectTrack(g_psCurrentPlayList[0].m_pcFullName);
-        g_u64CurrentPlaylistIndex = 0;
+        gst_pl_selectTrack(g_oCurrentPlaylist.m_psCurrentPlayList[0].m_pcFullName);
+        g_oCurrentPlaylist.m_u64CurrentPlaylistIndex = 0;
     }
     else
     {
@@ -658,9 +677,9 @@ void pl_core_getPlaylistItems(pl_core_MediaFileStruct *a_pItemsArray, uint64_t a
 {
     if(0 != a_pItemsArray)
     {
-        for(unsigned int i = 0; (i<g_u64CurrentPlaylistSize)&&(i<a_u64MaxSize); ++i)
+        for(unsigned int i = 0; (i<g_oCurrentPlaylist.m_u64CurrentPlaylistSize)&&(i<a_u64MaxSize); ++i)
         {
-            a_pItemsArray[i] = g_psCurrentPlayList[i];
+            a_pItemsArray[i] = g_oCurrentPlaylist.m_psCurrentPlayList[i];
         }
     }
     else
@@ -674,3 +693,8 @@ void pl_core_setTimePos(uint32_t a_u32TimePos)
     pushToQueueU64(E_SET_TIME, a_u32TimePos);
 }
 
+
+void pl_core_setRepeat(eRepeat a_eRepeat)
+{
+    g_oPlaybackOptions.m_eRepeat = a_eRepeat;
+}

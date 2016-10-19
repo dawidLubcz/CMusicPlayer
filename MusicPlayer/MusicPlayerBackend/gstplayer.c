@@ -6,6 +6,7 @@
 #undef PRINT_PREFIX
 #define PRINT_PREFIX "MP:GST_Player: "
 
+
 /// ENUMS
 typedef enum {
   GST_PLAY_FLAG_VIDEO         = (1 << 0),
@@ -29,7 +30,8 @@ typedef struct _sAudioData
 
 typedef struct _sCurrentState
 {
-    gdouble volume;
+    gdouble m_dVolume;
+    E_BOOL  m_fIsSeeking;
 }sCurrentState;
 
 typedef struct _sMessageThread
@@ -57,7 +59,7 @@ static gboolean gst_pl_messageHandler (GstMessage *msg)
             {
                 g_oPlayerCallbacs.m_pfEndOfStreamHandler();
             }
-            g_print ("End of stream\n");
+            PRINT_INF("End of stream");
         break;
 
         case GST_MESSAGE_ERROR:
@@ -90,7 +92,7 @@ void *gst_pl_messageThreadFunc(void *threadid)
     while(FALSE != g_oMessageThread.m_fIsRunning && 0 != poBus)
     {
         GstMessage* poMsg = gst_bus_timed_pop_filtered (poBus
-                                                      , 100 * GST_MSECOND
+                                                      , 1000 * GST_MSECOND
                                                       , GST_MESSAGE_STATE_CHANGED |
                                                         GST_MESSAGE_ERROR |
                                                         GST_MESSAGE_EOS |
@@ -103,6 +105,13 @@ void *gst_pl_messageThreadFunc(void *threadid)
         else
         {
             //Timeout
+            gint64 i64Pos = 0, i64Len = 0;
+            if (gst_element_query_position(g_oGstCurrentAudioData.m_pPlaybin, GST_FORMAT_TIME, &i64Pos) &&
+                gst_element_query_duration(g_oGstCurrentAudioData.m_pPlaybin, GST_FORMAT_TIME, &i64Len)  )
+            {
+                PRINT_OUT("\tTime elapsed: %" GST_TIME_FORMAT " / total: %" GST_TIME_FORMAT "\r",
+                         GST_TIME_ARGS(i64Pos), GST_TIME_ARGS(i64Len));
+            }
         }
     }
 
@@ -184,17 +193,23 @@ void gst_pl_pause()
 
 void gst_pl_setTimePos(uint32_t a_u32TimePos)
 {
-    if(FALSE != g_eInitialized && FALSE != g_eTrackWasSet)
+    if(FALSE != g_eInitialized && FALSE != g_eTrackWasSet && g_oGstCurrentAudioData.m_pPlaybin)
     {
-        PRINT_INF("setTimePos(): %u\n", a_u32TimePos);
+        gst_pl_pause();
+        gst_element_get_state(g_oGstCurrentAudioData.m_pPlaybin, NULL, NULL, GST_CLOCK_TIME_NONE);
 
         if(!gst_element_seek_simple (g_oGstCurrentAudioData.m_pPlaybin
                                     , GST_FORMAT_TIME
                                     , GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT
-                                    , 30 * GST_SECOND))
+                                    , a_u32TimePos * GST_SECOND))
         {
             PRINT_INF("setTimePos(), could not seek :(");
         }
+        else
+        {
+            PRINT_INF("setTimePos(): %u\n", a_u32TimePos);
+        }
+        gst_pl_play();
     }
     else
     {
@@ -263,20 +278,20 @@ void gst_pl_unload()
 
 void gst_pl_VolUp()
 {
-    gdouble dVol = (g_oState.volume + 0.1) * 10;
+    gdouble dVol = (g_oState.m_dVolume + 0.1) * 10;
     gst_pl_SetVol(dVol);
 
-    PRINT_INF("gst_pl_VolUp() VOL_UP, vol: %u, curr vol: %f", dVol, g_oState.volume);
+    PRINT_INF("gst_pl_VolUp() VOL_UP, vol: %u, curr vol: %f", dVol, g_oState.m_dVolume);
 }
 
 void gst_pl_VolDown()
 {
-    if((g_oState.volume - 0.1) > 0)
+    if((g_oState.m_dVolume - 0.1) > 0)
     {
-        gdouble dVol = (g_oState.volume - 0.1) * 10;
+        gdouble dVol = (g_oState.m_dVolume - 0.1) * 10;
         gst_pl_SetVol(dVol);
 
-        PRINT_INF("gst_pl_VolUp() VOL_DOWN, vol: %u, curr vol: %f", dVol, g_oState.volume);
+        PRINT_INF("gst_pl_VolUp() VOL_DOWN, vol: %u, curr vol: %f", dVol, g_oState.m_dVolume);
     }
     else
     {
@@ -295,7 +310,7 @@ void gst_pl_SetVol(double a_u8Vol)
     if(FALSE != g_eInitialized && FALSE != g_eTrackWasSet)
     {
         g_object_set(g_oGstCurrentAudioData.m_pPlaybin, "volume", dVolume, NULL );
-        g_oState.volume = dVolume;
+        g_oState.m_dVolume = dVolume;
 
         PRINT_INF("gst_pl_SetVol(), volume3: %f", dVolume);
     }

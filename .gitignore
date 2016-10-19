@@ -1,4 +1,6 @@
 *.mp3
 *.[oa]
 debug
+build
 raspberry_debug
+build-MusicPlayer-Desktop-Debug

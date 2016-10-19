@@ -10,11 +10,11 @@
 #undef PRINT_PREFIX
 #define PRINT_PREFIX "MP:Browser: "
 
-static char* g_aExtensionsTable[E_EXT_MAX + 1] =
+static char* g_aExtensionsTable[E_EXT_ALL + 1] =
 {
-    " "     , // Unknown
-    ".mp3"  ,//mp3
-    ".wav"
+    ".mp3",//mp3
+    ".wav",//wav
+    ".aac"
 };
 
 static pl_core_ID3v1 getID3v1Tag(char* a_pcFileName);
@@ -33,14 +33,17 @@ u_int64 getFilesCountInCurrDir(eExtension a_eExt)
         {
             if(DT_REG == psDirectoryContent->d_type)
             {
-                if(E_EXT_UNKNOWN != a_eExt)
+                if(E_EXT_ALL == a_eExt)
                 {
-                    if(NULL != strstr(psDirectoryContent->d_name, g_aExtensionsTable[a_eExt]))
+                    for(uint8_t i = 0; i < E_EXT_ALL; ++i)
                     {
-                        ++ui64Cntr;
+                        if(NULL != strstr(psDirectoryContent->d_name, g_aExtensionsTable[i]))
+                        {
+                            ++ui64Cntr;
+                        }
                     }
                 }
-                else
+                else if(NULL != strstr(psDirectoryContent->d_name, g_aExtensionsTable[a_eExt]))
                 {
                     ++ui64Cntr;
                 }
@@ -70,13 +73,23 @@ eUSBErrorCode getFilesInCurrentDir(pl_core_MediaFileStruct *a_psMediaFilesArray,
         {
             if(DT_REG == psDirectoryContent->d_type)
             {
-                if(E_EXT_UNKNOWN != a_eExt)
+                E_BOOL eFound = FALSE;
+                if(E_EXT_ALL == a_eExt)
                 {
-                    if(NULL == strstr(psDirectoryContent->d_name, g_aExtensionsTable[a_eExt]))
+                    for(uint8_t i = 0; i < E_EXT_ALL; ++i)
                     {
-                        continue;
+                        if(NULL != strstr(psDirectoryContent->d_name, g_aExtensionsTable[i]))
+                        {
+                            eFound = TRUE;
+                        }
                     }
                 }
+                else if(NULL != strstr(psDirectoryContent->d_name, g_aExtensionsTable[a_eExt]))
+                {
+                    eFound = TRUE;
+                }
+
+                if(!eFound)continue; // proceed only with supported extension
 
                 // define and clear
                 pl_core_MediaFileStruct sFile;

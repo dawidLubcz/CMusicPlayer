@@ -7,11 +7,17 @@
 
 typedef enum
 {
-    E_EXT_UNKNOWN,
     E_EXT_MP3,
     E_EXT_WAV,
-    E_EXT_MAX
+    E_EXT_AAC,
+    E_EXT_ALL
 }eExtension;
+
+typedef enum
+{
+    E_REPEAT_ALL,
+    E_REPEAT_ONE,
+}eRepeat;
 
 typedef struct
 {
@@ -63,6 +69,7 @@ void pl_core_setVol(int a_iVol);
 void pl_core_createPlayList();
 void pl_core_createMP3Playlist();
 void pl_core_getPlaylistItems(pl_core_MediaFileStruct* a_pItemsArray, uint64_t a_u64MaxSize);
+void pl_core_setRepeat(eRepeat a_eRepeat);
 
 void pl_core_cleanMemory();
 void pl_core_registerListener(pl_core_listenerInterface *a_psInterface);
