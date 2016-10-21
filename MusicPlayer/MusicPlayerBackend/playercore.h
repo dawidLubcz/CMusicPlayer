@@ -51,8 +51,6 @@ typedef struct
 
 E_ERROR_CODE pl_core_initialize();
 E_ERROR_CODE pl_core_deinitialize();
-void pl_core_runPlayerQueue();
-void pl_core_stopPlayerQueue();
 
 void pl_core_play();
 void pl_core_stop();
@@ -66,8 +64,9 @@ void pl_core_unload();
 void pl_core_volUp();
 void pl_core_volDown();
 void pl_core_setVol(int a_iVol);
-void pl_core_createPlayList();
-void pl_core_createMP3Playlist();
+void pl_core_createPlayListInCurrDir();
+void pl_core_createMP3PlaylistInCurrDir();
+void pl_core_createPlaylistFromDir(char* a_pcFolderWithPath);
 void pl_core_getPlaylistItems(pl_core_MediaFileStruct* a_pItemsArray, uint64_t a_u64MaxSize);
 void pl_core_setRepeat(eRepeat a_eRepeat);
 
@@ -97,6 +96,7 @@ typedef enum
     E_MP3_PLAYLIST_CREATE,
     E_SET_TRACK_INDEX,
     E_QUEUE_STOP,
+    E_PLAYLIST_CREATE_EX,
     E_MAX
 }E_PLAYER_COMMAND_t;
 
@@ -104,7 +104,7 @@ typedef union
 {
     uint64_t u64Param;
     int32_t i32Param;    
-    char paBuffer[255];
+    char paBuffer[512];
 }uDataParams_t;
 
 typedef struct

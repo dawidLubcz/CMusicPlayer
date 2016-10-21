@@ -6,8 +6,6 @@
 
 void filesListHandler(uint64_t a_u64Size)
 {
-    printf("HANDLED :):), size: %lu \n", a_u64Size);
-
     const uint8_t u8Size = 100;
     pl_core_MediaFileStruct itemsArray[u8Size];
     memset(itemsArray, '\0', u8Size * sizeof(pl_core_MediaFileStruct));
@@ -31,7 +29,6 @@ void trackInfoHandler(pl_core_ID3v1 a_sTrackInfo)
 int main()
 {
     pl_core_initialize();
-    pl_core_runPlayerQueue();
 
     pl_core_listenerInterface oListener;
     oListener.pfListReady = filesListHandler;
@@ -41,7 +38,7 @@ int main()
     int iOption = 0;
     do
     {
-        printf("Choose an option:\n 0->PLAY\n1->STOP\n2->PAUSE\n3->NEXT\n4->PREV\n5->SET_TRACK\n6->UNLOAD\n-1->QUIT\n7->Vol Up\n8->Vol Down\n9->SetVol\n10->List files\n11->List MP3\n12->set track with index\n13->set time position\n14->repeat ALL\n15->repeat ONE\n");
+        printf("Choose an option:\n 0->PLAY\n1->STOP\n2->PAUSE\n3->NEXT\n4->PREV\n5->SET_TRACK\n6->UNLOAD\n-1->QUIT\n7->Vol Up\n8->Vol Down\n9->SetVol\n10->List files\n11->List MP3\n12->set track with index\n13->set time position\n14->repeat ALL\n15->repeat ONE\n16->list folder\n");
         scanf("%d", &iOption);
 
         switch(iOption)
@@ -101,12 +98,12 @@ int main()
 
         case 10:
         {
-            pl_core_createPlayList();
+            pl_core_createPlayListInCurrDir();
         }break;
 
         case 11:
         {
-            pl_core_createMP3Playlist();
+            pl_core_createMP3PlaylistInCurrDir();
         }break;
 
         case 12:
@@ -139,6 +136,12 @@ int main()
             pl_core_setRepeat(E_REPEAT_ONE);
         }break;
 
+        case 16:
+        {
+            pl_core_createPlaylistFromDir("USB3");
+        }break;
+
+
         case -1:
         {
             pl_core_unload();
@@ -148,7 +151,6 @@ int main()
 
     }while(iOption != (-1));
 
-    pl_core_stopPlayerQueue();
     pl_core_deinitialize();
 
     ///////////////////// USB //////////////////////

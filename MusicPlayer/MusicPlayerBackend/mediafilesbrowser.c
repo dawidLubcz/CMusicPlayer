@@ -20,51 +20,72 @@ static char* g_aExtensionsTable[E_EXT_ALL + 1] =
 static pl_core_ID3v1 getID3v1Tag(char* a_pcFileName);
 static void getID3v2Tag(char* a_pcFileName);
 
-u_int64 getFilesCountInCurrDir(eExtension a_eExt)
+static char g_pcCurrentFolder[255] = {0};
+
+u_int64 getFilesCountInDir(eExtension a_eExt, char* a_pcDirectory)
 {
     u_int64 ui64Cntr = 0;
-    DIR* pDIrectory = 0;
-    struct dirent* psDirectoryContent = 0;
-    pDIrectory = opendir(".");
 
-    if(0 != pDIrectory)
+    if(a_pcDirectory != 0 && 0 < strlen(a_pcDirectory))
     {
-        while((psDirectoryContent = readdir(pDIrectory)) != NULL)
+        DIR* pDIrectory = 0;
+        struct dirent* psDirectoryContent = 0;
+        pDIrectory = opendir(".");
+
+        if(0 != pDIrectory)
         {
-            if(DT_REG == psDirectoryContent->d_type)
+            while((psDirectoryContent = readdir(pDIrectory)) != NULL)
             {
-                if(E_EXT_ALL == a_eExt)
+                if(DT_REG == psDirectoryContent->d_type)
                 {
-                    for(uint8_t i = 0; i < E_EXT_ALL; ++i)
+                    if(E_EXT_ALL == a_eExt)
                     {
-                        if(NULL != strstr(psDirectoryContent->d_name, g_aExtensionsTable[i]))
+                        for(uint8_t i = 0; i < E_EXT_ALL; ++i)
                         {
-                            ++ui64Cntr;
+                            if(NULL != strstr(psDirectoryContent->d_name, g_aExtensionsTable[i]))
+                            {
+                                ++ui64Cntr;
+                            }
                         }
                     }
-                }
-                else if(NULL != strstr(psDirectoryContent->d_name, g_aExtensionsTable[a_eExt]))
-                {
-                    ++ui64Cntr;
+                    else if(NULL != strstr(psDirectoryContent->d_name, g_aExtensionsTable[a_eExt]))
+                    {
+                        ++ui64Cntr;
+                    }
                 }
             }
-        }
 
-        closedir(pDIrectory);
+            closedir(pDIrectory);
+        }
     }
+    else
+    {
+        PRINT_ERR("getFilesCountInDir(), directory path not valid");
+    }
+
+    PRINT_INF("getFilesCountInDir(), found %u files", ui64Cntr);
+
     return ui64Cntr;
 }
 
-eUSBErrorCode getFilesInCurrentDir(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int64 a_pSize, eExtension a_eExt)
+u_int64 getFilesCountInCurrDir(eExtension a_eExt)
 {
-    assert(0 !=  a_psMediaFilesArray);
+    u_int64 ui64Cntr = getFilesCountInDir(a_eExt, ".");
+    return ui64Cntr;
+}
+
+eUSBErrorCode getFilesInDir(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int64 a_pSize, eExtension a_eExt, char* a_pcDirectory)
+{
+    assert(0 != a_psMediaFilesArray);
+    assert(0 != a_pcDirectory);
+    assert(0 <  strlen(a_pcDirectory));
 
     memset((pl_core_MediaFileStruct*)a_psMediaFilesArray,'\0',a_pSize * sizeof(pl_core_MediaFileStruct));
 
     u_int64 liCntr = 0;
     DIR* pDIrectory = 0;
     struct dirent* psDirectoryContent = 0;
-    pDIrectory = opendir(".");
+    pDIrectory = opendir(a_pcDirectory);
 
     if(0 != pDIrectory)
     {
@@ -119,6 +140,12 @@ eUSBErrorCode getFilesInCurrentDir(pl_core_MediaFileStruct *a_psMediaFilesArray,
 
         closedir(pDIrectory);
     }
+    return E_ERR_OK;
+}
+
+eUSBErrorCode getFilesInCurrentDir(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int64 a_pSize, eExtension a_eExt)
+{
+    getFilesInDir(a_psMediaFilesArray, a_pSize, a_eExt, ".");
     return E_ERR_OK;
 }
 
@@ -178,10 +205,9 @@ pl_core_ID3v1 getID3v1Tag(char* a_pcFileName)
 
             break;
         }
+        fclose(pFile);
 
     }while(0);
-
-    fclose(pFile);
 
     return sResult;
 }
@@ -276,9 +302,9 @@ static void getID3v2Tag(char* a_pcFileName)
             u32BytesLeft -= u32FrameSize + 10;
         }
 
-    }while(0);
+        fclose(pFile);
 
-    fclose(pFile);
+    }while(0);
 
     return;
 }

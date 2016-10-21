@@ -2,6 +2,7 @@
 #include "common.h"
 #include "sdlplayer.h"
 #include "mediafilesbrowser.h"
+#include "usblistener.h"
 
 #include <sys/types.h>
 #include <sys/ipc.h>
@@ -36,6 +37,16 @@ typedef struct _sPlaybackOptions
     int32_t m_eRepeat;
 }sPlaybackOptions;
 
+typedef struct _sUSBSource
+{
+    pthread_t m_oUSBListenerThread;
+}sUSBSource;
+
+typedef struct _sSources
+{
+    sUSBSource m_sUSB;
+}sSources;
+
 static const char*     g_pcMsqQueueFile    = "msgQueueFile";
 static char            g_cProjectID        = 'D' | 'L';
 static int32_t         g_i32MsgQueueID     = 0;
@@ -50,6 +61,7 @@ static pthread_mutex_t g_sPlayerQueueMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static sCurrentPlaylist g_oCurrentPlaylist = {0};
 static sPlaybackOptions g_oPlaybackOptions = {E_REPEAT_ALL};
+static sSources         g_oSupportedSources = {0};
 
 /// private functions
 static E_ERROR_CODE appCoreInitQueue();
@@ -62,6 +74,10 @@ static void pushToQueueString(E_PLAYER_COMMAND_t a_eCommand, char* a_psStr);
 static void pushToQueueU64(E_PLAYER_COMMAND_t a_eCommand, uint64_t a_u64Param);
 static void pushToQueueI32(E_PLAYER_COMMAND_t a_eCommand, int32_t a_i32Param);
 static void pushSave(sData_t a_sMsg);
+
+static void pl_core_runPlayerQueue();
+static void pl_core_runUSBListener();
+static void pl_core_stopPlayerQueue();
 
 /// handlers
 static void handlePlay(uDataParams_t a_sParams);
@@ -79,8 +95,12 @@ static void handlePlayListCreate(uDataParams_t a_sParams);
 static void handleMp3PlaylistCreate(uDataParams_t a_sParams);
 static void handleSetTrackWithIndex(uDataParams_t a_sParams);
 static void handleQueueExit(uDataParams_t a_sParams);
+static void handlePlaylistFromDir(uDataParams_t a_sParams);
 
 static void handleEndOfStream(void);
+
+static void handleUSBConnected(const char* a_psNewPartition);
+static void handleUSBDisconnected(const char* a_psRemovedPartition);
 
 handlerPointer g_apAPIHandlersArray[E_MAX] =
 {
@@ -98,7 +118,8 @@ handlerPointer g_apAPIHandlersArray[E_MAX] =
     handlePlayListCreate, // List files
     handleMp3PlaylistCreate, // List files with filter
     handleSetTrackWithIndex,
-    handleQueueExit
+    handleQueueExit,
+    handlePlaylistFromDir
 };
 
 void pl_core_cleanMemory()
@@ -118,26 +139,43 @@ void initializeGstObserver()
     gst_pl_setListenerFunctions(oInterface);
 }
 
+void initializeSources()
+{
+    sUSBSource sUSB;
+    g_oSupportedSources.m_sUSB = sUSB;
+
+    usb_listenerInit();
+
+    usb_callbacsInterface sInterface = {0};
+    sInterface.m_pfPartitionConnected = handleUSBConnected;
+    sInterface.m_pfPartitionDisconnected = handleUSBDisconnected;
+    usb_setCallbacs(sInterface);
+}
+
 E_ERROR_CODE pl_core_initialize()
 {
     E_ERROR_CODE eResult = ERR_OK;
 
     gst_pl_Initialize();
     initializeGstObserver();
+    initializeSources();
 
     g_psAsyncInterfaceQueue = g_async_queue_new ();
 
     if(ERR_OK == eResult) g_u8Initialized = TRUE;
+
+    pl_core_runPlayerQueue();
+    pl_core_runUSBListener();
 
     return eResult;
 }
 
 E_ERROR_CODE pl_core_deinitialize()
 {
+    pl_core_stopPlayerQueue();
     gst_pl_Deinitialize();
 
     pl_core_cleanMemory();
-    pl_core_stopPlayerQueue();
 
     if(0 != g_psAsyncInterfaceQueue)
     {
@@ -203,7 +241,7 @@ void pl_core_runIpcThread()
 
 void pl_core_runPlayerQueue()
 {
-    PRINT_INF("start()");
+    PRINT_INF("PlayerQueue start()");
 
     if(FALSE != g_u8Initialized)
     {
@@ -221,6 +259,42 @@ void pl_core_runPlayerQueue()
     else
     {
         PRINT_ERR("appCorePlayerQueueThreadRun(), NOT INITIALIZED");
+    }
+
+    return;
+}
+
+void stopUSBListener()
+{
+    usb_listenerStop();
+}
+
+void *threadUSB(void *arg)
+{
+    usb_listenerRun();
+    return arg;
+}
+
+void pl_core_runUSBListener()
+{
+    PRINT_INF("USBListener start()");
+
+    if(FALSE != g_u8Initialized)
+    {
+        int iRetVal = pthread_create(&g_oSupportedSources.m_sUSB.m_oUSBListenerThread,
+                                     0,
+                                     threadUSB,
+                                     0
+                                     );
+        if(iRetVal)
+        {
+            PRINT_ERR("runUSBListener(), pthread_create FAILED");
+            perror("thread_create");
+        }
+    }
+    else
+    {
+        PRINT_ERR("runUSBListener(), NOT INITIALIZED");
     }
 
     return;
@@ -451,6 +525,29 @@ void handleEndOfStream(void)
     }
 }
 
+static char g_pcCurrentPartition[128] = {0};
+static void handleUSBConnected(const char* a_psNewPartition)
+{
+    PRINT_INF("handleUSBConnected(), partition: %s", a_psNewPartition);
+    if(usb_mount(a_psNewPartition, "USB3"))
+    {
+        usleep(2000000);
+        memset(g_pcCurrentPartition, '\0', 128);
+        strcpy(g_pcCurrentPartition, a_psNewPartition);
+
+        //pl_core_stop();
+        //pl_core_createPlaylistFromDir("USB3");
+        //pl_core_setTrackWithIndex(0);
+        //pl_core_play();
+    }
+}
+
+static void handleUSBDisconnected(const char* a_psRemovedPartition)
+{
+    PRINT_INF("handleUSBDisconnected(), partition: %s", a_psRemovedPartition);
+    usb_umount("USB3");
+}
+
 void notifyListenersListReady(uint64_t a_u64Count)
 {
     GList* pfFirstObserver = g_list_first(g_psListenersList);
@@ -479,15 +576,23 @@ void notifyListenersTrackInfoReady(pl_core_ID3v1 a_sTrackInfo)
     }
 }
 
-void handlePlayListCreate(uDataParams_t a_sParams)
+E_BOOL clearCurrentPlaylist()
 {
-    PRINT_INF("handleListFiles(), %d", a_sParams.i32Param);
-
+    E_BOOL eResult = FALSE;
     if(0 != g_oCurrentPlaylist.m_psCurrentPlayList && 0 < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
     {
         free(g_oCurrentPlaylist.m_psCurrentPlayList);
         g_oCurrentPlaylist.m_u64CurrentPlaylistSize = 0;
+        eResult = TRUE;
     }
+    return eResult;
+}
+
+void handlePlayListCreate(uDataParams_t a_sParams)
+{
+    PRINT_INF("handleListFiles(), %d", a_sParams.i32Param);
+
+    clearCurrentPlaylist();
 
     uint64_t u64Count = getFilesCountInCurrDir(E_EXT_ALL);
     g_oCurrentPlaylist.m_psCurrentPlayList= malloc(u64Count * sizeof(pl_core_MediaFileStruct));
@@ -501,11 +606,7 @@ void handleMp3PlaylistCreate(uDataParams_t a_sParams)
 {
     PRINT_INF("handleListFilesFiltered(), %d", a_sParams.i32Param);
 
-    if(0 != g_oCurrentPlaylist.m_psCurrentPlayList && 0 < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
-    {
-        free(g_oCurrentPlaylist.m_psCurrentPlayList);
-        g_oCurrentPlaylist.m_u64CurrentPlaylistSize = 0;
-    }
+    clearCurrentPlaylist();
 
     eExtension eExt = E_EXT_MP3;
     uint64_t u64Count = getFilesCountInCurrDir(eExt);
@@ -514,6 +615,35 @@ void handleMp3PlaylistCreate(uDataParams_t a_sParams)
 
     g_oCurrentPlaylist.m_u64CurrentPlaylistSize = u64Count;
     notifyListenersListReady(u64Count);
+}
+
+static void handlePlaylistFromDir(uDataParams_t a_sParams)
+{
+    if(0 != a_sParams.paBuffer)
+    {
+        PRINT_INF("handlePlaylistFromDir(), %s", a_sParams.paBuffer);
+
+        clearCurrentPlaylist();
+
+        uint64_t u64Count = getFilesCountInDir(E_EXT_ALL, a_sParams.paBuffer);
+        if(u64Count)
+        {
+            g_oCurrentPlaylist.m_psCurrentPlayList= malloc(u64Count * sizeof(pl_core_MediaFileStruct));
+            getFilesInDir(g_oCurrentPlaylist.m_psCurrentPlayList, u64Count, E_EXT_ALL, a_sParams.paBuffer);
+
+            g_oCurrentPlaylist.m_u64CurrentPlaylistSize = u64Count;
+            notifyListenersListReady(u64Count);
+        }
+        else
+        {
+            PRINT_INF("No files in directory: %s", a_sParams.paBuffer);
+        }
+    }
+    else
+    {
+        PRINT_ERR("handlePlaylistFromDir(), invalid parameter");
+    }
+    return;
 }
 
 void handleSetTrackWithIndex(uDataParams_t a_sParams)
@@ -634,12 +764,12 @@ void pl_core_setVol(int a_iVol)
     pushToQueueI32(E_SET_VOL, a_iVol);
 }
 
-void pl_core_createPlayList()
+void pl_core_createPlayListInCurrDir()
 {
     pushToQueue(E_PLAYLIST_CREATE);
 }
 
-void pl_core_createMP3Playlist()
+void pl_core_createMP3PlaylistInCurrDir()
 {
     pushToQueue(E_MP3_PLAYLIST_CREATE);
 }
@@ -647,6 +777,11 @@ void pl_core_createMP3Playlist()
 void pl_core_setTrackWithIndex(uint64_t a_u64Id)
 {
     pushToQueueU64(E_SET_TRACK_INDEX, a_u64Id);
+}
+
+void pl_core_createPlaylistFromDir(char *a_pcFolderWithPath)
+{
+    pushToQueueString(E_PLAYLIST_CREATE_EX, a_pcFolderWithPath);
 }
 
 // Note: whole struct object should be adding to the queue, not just one member

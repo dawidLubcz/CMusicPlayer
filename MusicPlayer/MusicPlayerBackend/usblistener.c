@@ -1,32 +1,64 @@
 #include "usblistener.h"
+#include "common.h"
 
 #include <libudev.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
+
+#include <sys/mount.h>
 
 #define NOK -1
 #define OK 0
 
+#undef PRINT_PREFIX
+#define PRINT_PREFIX "MP:USBListener: "
+
+#define PARTITION_NAME "partition"
+#define ACTION_REM "remove"
+#define ACTION_ADD "add"
+
+static usb_callbacsInterface g_oInterface = {0};
+static E_BOOL g_eInterfaceWasSet = FALSE;
+
 static const char* g_cpcUdeviceName = "udev";
+static const char* g_cpcPartitionName = "partition";
+static const char* g_cpcActionRem = "remove";
+static const char* g_cpcActionAdd = "add";
 static unsigned short int g_iInitialized = 0;
 static struct udev* g_pUdevice = 0;
 static struct udev_monitor* g_pUdeviceMonitor = 0;
 static int g_iDeviceFileDescriptor = 0;
 static volatile int g_iRun = 0;
 
-int usbListenerInit()
+void usb_setCallbacs(usb_callbacsInterface a_sInterface)
+{
+    if(a_sInterface.m_pfPartitionConnected != 0 && a_sInterface.m_pfPartitionDisconnected != 0)
+    {
+        g_oInterface = a_sInterface;
+        g_eInterfaceWasSet = TRUE;
+        PRINT_INF("usb_setCallbacs(), OK");
+    }
+    else
+    {
+        g_eInterfaceWasSet = FALSE;
+        PRINT_INF("usb_setCallbacs(), FAILED");
+    }
+}
+
+int usb_listenerInit()
 {
     g_pUdevice = udev_new();
     if(!g_pUdevice)
     {
-        printf("udev create failed\n");
+        PRINT_INF("usbListenerInit(), udev create failed");
         return NOK;
     }
 
     g_pUdeviceMonitor = udev_monitor_new_from_netlink(g_pUdevice, g_cpcUdeviceName);
     if(!g_pUdeviceMonitor)
     {
-        printf("udev monitor connect failed\n");
+        PRINT_INF("usbListenerInit(), dev monitor connect failed\n");
         return NOK;
     }
 
@@ -38,17 +70,17 @@ int usbListenerInit()
     return OK;
 }
 
-void usbListenerRun()
+void usb_listenerRun()
 {
     g_iRun = 1;
 
     if(!g_iInitialized)
     {
-        printf("Not initialized! quit\n");
+        PRINT_INF("usbListenerRun(), Not initialized! quit\n");
         return;
     }
 
-    printf("USB listener started\n");
+    PRINT_INF("usbListenerRun(), USB listener started\n");
 
     while(g_iRun)
     {
@@ -71,12 +103,35 @@ void usbListenerRun()
             pDevice = udev_monitor_receive_device(g_pUdeviceMonitor);
             if (pDevice)
             {
-                printf("Got Device\n");
-                printf("   Node: %s\n", udev_device_get_devnode(pDevice));
-                printf("   Subsystem: %s\n", udev_device_get_subsystem(pDevice));
-                printf("   Devtype: %s\n", udev_device_get_devtype(pDevice));
+                const char* pcDevNode = udev_device_get_devnode(pDevice);
+                const char* pcDevType = udev_device_get_devtype(pDevice);
+                const char* pcDevAction = udev_device_get_action(pDevice);
 
-                printf("   Action: %s\n",udev_device_get_action(pDevice));
+                if(g_eInterfaceWasSet)
+                {
+                    if(0 != pcDevNode && 0 != pcDevAction && 0 != pcDevType &&
+                       0 < strlen(pcDevNode) && 0 < strlen(pcDevAction) && 0 < strlen(pcDevType))
+                    {
+                        if(NULL != strstr(pcDevType, g_cpcPartitionName))
+                        {
+                            if(0 != pcDevAction && NULL != strstr(pcDevAction, g_cpcActionAdd))
+                            {
+                                g_oInterface.m_pfPartitionConnected(pcDevNode);
+                            }
+                            else if(0 != pcDevAction && NULL != strstr(pcDevAction, g_cpcActionRem))
+                            {
+                                g_oInterface.m_pfPartitionDisconnected(pcDevNode);
+                            }
+                        }
+                    }
+                }
+
+                printf("Got Device\n");
+                printf("   Node: %s\n", pcDevNode);
+                printf("   Subsystem: %s\n", udev_device_get_subsystem(pDevice));
+                printf("   Devtype: %s\n", pcDevType);
+
+                printf("   Action: %s\n", pcDevAction);
                 udev_device_unref(pDevice);
             }
             else
@@ -90,7 +145,34 @@ void usbListenerRun()
     }
 }
 
-void usb_stop()
+E_BOOL usb_mount(const char* a_pcDevNode, const char* a_pcDirectory)
+{
+    E_BOOL eResult = FALSE;
+    if(mount(a_pcDevNode, a_pcDirectory, "vfat", MS_NOATIME, NULL))
+    {
+        PRINT_ERR("Mount failed");
+    }
+    else
+    {
+        eResult = TRUE;
+        PRINT_INF("Mount successful");
+    }
+    return eResult;
+}
+
+void usb_umount(char* a_pcDevNode)
+{
+    if(umount(a_pcDevNode))
+    {
+        PRINT_ERR("Umount failed");
+    }
+    else
+    {
+        PRINT_INF("Umount successful");
+    }
+}
+
+void usb_listenerStop()
 {
     g_iRun = 0;
 }
