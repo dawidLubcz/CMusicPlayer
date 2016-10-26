@@ -12,7 +12,7 @@ void filesListHandler(uint64_t a_u64Size)
 
     pl_core_getPlaylistItems(itemsArray, u8Size);
 
-    for(unsigned int i = 0; i < a_u64Size; ++i)
+    for(unsigned int i = 0; i < u8Size; ++i)
     {
         printf("Track nr: %d -> %s\n",i, itemsArray[i].m_pcName);
     }

@@ -13,6 +13,7 @@
 #include <glib.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "gstplayer.h"
 
@@ -526,30 +527,49 @@ void handleEndOfStream(void)
 }
 
 static char g_pcCurrentPartition[128] = {0};
+static char g_pcUsbMountDir[PL_CORE_FILE_NAME_SIZE] = {0};
+static int  g_iUsbMounted = FALSE;
+
 static void handleUSBConnected(const char* a_psNewPartition)
 {
     PRINT_INF("handleUSBConnected(), partition: %s", a_psNewPartition);
 
-    if(usb_mount(a_psNewPartition, "/home/dawid/Documents/MusicPlayer/CMusicPlayer/build-MusicPlayer-Desktop-Debug/MusicPlayerBackend/USB"))
+    char* pcMountDir = "USB";
+    memset(g_pcUsbMountDir, '\0', PL_CORE_FILE_NAME_SIZE);
+    getcwd(g_pcUsbMountDir, PL_CORE_FILE_NAME_SIZE);
+    strcat(g_pcUsbMountDir, "/");
+    strcat(g_pcUsbMountDir,pcMountDir);
+
+    if(usb_mount(a_psNewPartition, g_pcUsbMountDir))
     {
         memset(g_pcCurrentPartition, '\0', 128);
         strcpy(g_pcCurrentPartition, a_psNewPartition);
 
         pl_core_stop();
-        pl_core_createPlaylistFromDir("/home/dawid/Documents/MusicPlayer/CMusicPlayer/build-MusicPlayer-Desktop-Debug/MusicPlayerBackend/USB");
+        pl_core_createPlaylistFromDir(g_pcUsbMountDir);
         pl_core_setTrackWithIndex(0);
         pl_core_play();
 
-        getFilesCountInDir_r(E_EXT_MP3, "/home/dawid/Documents/MusicPlayer/CMusicPlayer/build-MusicPlayer-Desktop-Debug/MusicPlayerBackend/USB");
+        g_iUsbMounted = TRUE;
+
+        //getFilesCountInDir_r(E_EXT_MP3, "/home/dawid/Documents/MusicPlayer/CMusicPlayer/build-MusicPlayer-Desktop-Debug/MusicPlayerBackend/USB");
     }
 }
 
 static void handleUSBDisconnected(const char* a_psRemovedPartition)
 {
-    PRINT_INF("handleUSBDisconnected(), partition: %s", a_psRemovedPartition);
-    usb_umount("/home/dawid/Documents/MusicPlayer/CMusicPlayer/build-MusicPlayer-Desktop-Debug/MusicPlayerBackend/USB");
-    pl_core_stop();
-    pl_core_unload();
+    if(g_iUsbMounted)
+    {
+        usb_umount(g_pcUsbMountDir);
+        pl_core_stop();
+        pl_core_unload();
+
+        PRINT_INF("handleUSBDisconnected(), partition: %s", a_psRemovedPartition);
+    }
+    else
+    {
+        PRINT_ERR("handleUSBDisconnected(), failed");
+    }
 }
 
 void notifyListenersListReady(uint64_t a_u64Count)
@@ -788,7 +808,6 @@ void pl_core_createPlaylistFromDir(char *a_pcFolderWithPath)
     pushToQueueString(E_PLAYLIST_CREATE_EX, a_pcFolderWithPath);
 }
 
-// Note: whole struct object should be adding to the queue, not just one member
 void pl_core_registerListener(pl_core_listenerInterface* a_psInterface)
 {
     if(FALSE != g_u8Initialized && 0 != a_psInterface)
@@ -806,6 +825,7 @@ void pl_core_deregisterListener(pl_core_listenerInterface* a_psInterface)
     {
        if(((pl_core_listenerInterface*)pfFirstObserver->data) == a_psInterface)
        {
+           // TO DO
            //remove element
        }
        pfFirstObserver = pfFirstObserver->next;
@@ -831,7 +851,6 @@ void pl_core_setTimePos(uint32_t a_u32TimePos)
 {
     pushToQueueU64(E_SET_TIME, a_u32TimePos);
 }
-
 
 void pl_core_setRepeat(eRepeat a_eRepeat)
 {

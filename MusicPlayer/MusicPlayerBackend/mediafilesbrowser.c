@@ -15,7 +15,8 @@ static char* g_aExtensionsTable[E_EXT_ALL + 1] =
     ".mp3",//mp3
     ".wav",//wav
     ".aac",
-    ".m4a"
+    ".m4a",
+    ".flac"
 };
 
 static pl_core_ID3v1 getID3v1Tag(char* a_pcFileName);
@@ -78,27 +79,31 @@ u_int64 getFilesCountInCurrDir(eExtension a_eExt)
 
 eUSBErrorCode getFilesInDir(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int64 a_pSize, eExtension a_eExt, char* a_pcDirectory)
 {
+    // check params
     assert(0 != a_psMediaFilesArray);
     assert(0 != a_pcDirectory);
     assert(0 <  strlen(a_pcDirectory));
 
-    PRINT_INF("getFilesInDir(), dir: %s", a_pcDirectory);
+    PRINT_INF("getFilesInDir(), dir: %s, size: %u", a_pcDirectory, a_pSize);
 
+    // clear output memory
     memset((pl_core_MediaFileStruct*)a_psMediaFilesArray,'\0',a_pSize * sizeof(pl_core_MediaFileStruct));
 
-    u_int64 liCntr = 0;
-    DIR* pDIrectory = 0;
-    struct dirent* psDirectoryContent = 0;
+    uint64_t u64Cntr = 0; // counter
+    DIR* pDIrectory  = 0; // poiter to directory
+    struct dirent* psDirectoryContent = 0; // content of the directory
     pDIrectory = opendir(a_pcDirectory);
 
     if(0 != pDIrectory)
     {
         while( ((psDirectoryContent = readdir(pDIrectory)) != NULL) &&
-               liCntr < a_pSize )
+               u64Cntr < a_pSize )
         {
+            // search only for regular files
             if(DT_REG == psDirectoryContent->d_type)
             {
                 E_BOOL eFound = FALSE;
+
                 if(E_EXT_ALL == a_eExt)
                 {
                     for(uint8_t i = 0; i < E_EXT_ALL; ++i)
@@ -120,7 +125,7 @@ eUSBErrorCode getFilesInDir(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int6
                 pl_core_MediaFileStruct sFile;
                 memset(&sFile, '\0', sizeof(pl_core_MediaFileStruct));
 
-                // set filename
+                // set filename with path
                 char pcCurrentPath[PL_CORE_FILE_NAME_SIZE];
                 memset(pcCurrentPath, '\0', PL_CORE_FILE_NAME_SIZE);
 
@@ -136,21 +141,20 @@ eUSBErrorCode getFilesInDir(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int6
                 strcat(pcCurrentPath, "/");
                 strcat(pcCurrentPath, psDirectoryContent->d_name);
 
-                strcpy(sFile.m_pcFullName, pcCurrentPath);
-                strcpy(sFile.m_pcName, psDirectoryContent->d_name);
-                sFile.m_eExtension = a_eExt;
+                strcpy(sFile.m_pcFullName, pcCurrentPath); // filename with path
+                strcpy(sFile.m_pcName, psDirectoryContent->d_name); // just filename
+                sFile.m_eExtension = a_eExt; // file extension
 
                 // get track info if available
                 pl_core_ID3v1 trackInfo = getID3v1Tag(psDirectoryContent->d_name);
                 sFile.m_sTrackInfo = trackInfo;
 
-                getID3v2Tag(psDirectoryContent->d_name);
+                //getID3v2Tag(psDirectoryContent->d_name); not working YET ;)
 
-                a_psMediaFilesArray[liCntr] =sFile;
-                ++liCntr;
+                a_psMediaFilesArray[u64Cntr] =sFile;
+                ++u64Cntr;
             }
         }
-
         closedir(pDIrectory);
     }
     return E_ERR_OK;

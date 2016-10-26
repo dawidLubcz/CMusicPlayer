@@ -126,11 +126,10 @@ void usb_listenerRun()
                     }
                 }
 
-                printf("Got Device\n");
+                printf("   Got Device\n");
                 printf("   Node: %s\n", pcDevNode);
                 printf("   Subsystem: %s\n", udev_device_get_subsystem(pDevice));
                 printf("   Devtype: %s\n", pcDevType);
-
                 printf("   Action: %s\n", pcDevAction);
                 udev_device_unref(pDevice);
             }
