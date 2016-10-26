@@ -10,6 +10,7 @@ typedef enum
     E_EXT_MP3,
     E_EXT_WAV,
     E_EXT_AAC,
+    E_EXT_M4A,
     E_EXT_ALL
 }eExtension;
 

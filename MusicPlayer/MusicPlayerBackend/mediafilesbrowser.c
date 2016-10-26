@@ -14,7 +14,8 @@ static char* g_aExtensionsTable[E_EXT_ALL + 1] =
 {
     ".mp3",//mp3
     ".wav",//wav
-    ".aac"
+    ".aac",
+    ".m4a"
 };
 
 static pl_core_ID3v1 getID3v1Tag(char* a_pcFileName);
@@ -28,9 +29,11 @@ u_int64 getFilesCountInDir(eExtension a_eExt, char* a_pcDirectory)
 
     if(a_pcDirectory != 0 && 0 < strlen(a_pcDirectory))
     {
+        PRINT_INF("getFilesCountInDir(), dir: %s", a_pcDirectory);
+
         DIR* pDIrectory = 0;
         struct dirent* psDirectoryContent = 0;
-        pDIrectory = opendir(".");
+        pDIrectory = opendir(a_pcDirectory);
 
         if(0 != pDIrectory)
         {
@@ -54,7 +57,6 @@ u_int64 getFilesCountInDir(eExtension a_eExt, char* a_pcDirectory)
                     }
                 }
             }
-
             closedir(pDIrectory);
         }
     }
@@ -79,6 +81,8 @@ eUSBErrorCode getFilesInDir(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int6
     assert(0 != a_psMediaFilesArray);
     assert(0 != a_pcDirectory);
     assert(0 <  strlen(a_pcDirectory));
+
+    PRINT_INF("getFilesInDir(), dir: %s", a_pcDirectory);
 
     memset((pl_core_MediaFileStruct*)a_psMediaFilesArray,'\0',a_pSize * sizeof(pl_core_MediaFileStruct));
 
@@ -119,7 +123,16 @@ eUSBErrorCode getFilesInDir(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int6
                 // set filename
                 char pcCurrentPath[PL_CORE_FILE_NAME_SIZE];
                 memset(pcCurrentPath, '\0', PL_CORE_FILE_NAME_SIZE);
-                getcwd(pcCurrentPath, PL_CORE_FILE_NAME_SIZE);
+
+                if(strstr(a_pcDirectory, "."))
+                {
+                    getcwd(pcCurrentPath, PL_CORE_FILE_NAME_SIZE);
+                }
+                else
+                {
+                    strcpy(pcCurrentPath, a_pcDirectory);
+                }
+
                 strcat(pcCurrentPath, "/");
                 strcat(pcCurrentPath, psDirectoryContent->d_name);
 
@@ -147,6 +160,81 @@ eUSBErrorCode getFilesInCurrentDir(pl_core_MediaFileStruct *a_psMediaFilesArray,
 {
     getFilesInDir(a_psMediaFilesArray, a_pSize, a_eExt, ".");
     return E_ERR_OK;
+}
+
+u_int64 getFilesCountInCurrDir_r(eExtension a_eExt)
+{
+
+}
+
+eUSBErrorCode getFilesInCurrentDir_r(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int64 a_pSize, eExtension a_eExt)
+{
+
+}
+
+u_int64 getFilesCountInDir_r(eExtension a_eExt, char *a_pcDirectory)
+{
+    u_int64 ui64Cntr = 0;
+
+    if(a_pcDirectory != 0 && 0 < strlen(a_pcDirectory))
+    {
+        PRINT_INF("getFilesCountInDir(), dir: %s", a_pcDirectory);
+
+        DIR* pDIrectory = 0;
+        struct dirent* psDirectoryContent = 0;
+        pDIrectory = opendir(a_pcDirectory);
+
+        if(0 != pDIrectory)
+        {
+            while((psDirectoryContent = readdir(pDIrectory)) != NULL)
+            {
+                if(DT_REG == psDirectoryContent->d_type)
+                {
+                    if(E_EXT_ALL == a_eExt)
+                    {
+                        for(uint8_t i = 0; i < E_EXT_ALL; ++i)
+                        {
+                            if(NULL != strstr(psDirectoryContent->d_name, g_aExtensionsTable[i]))
+                            {
+                                ++ui64Cntr;
+                            }
+                        }
+                    }
+                    else if(NULL != strstr(psDirectoryContent->d_name, g_aExtensionsTable[a_eExt]))
+                    {
+                        ++ui64Cntr;
+                    }
+                }
+                else if(DT_DIR == psDirectoryContent->d_type)
+                {
+                    char pcCurrentPath[PL_CORE_FILE_NAME_SIZE];
+                    memset(pcCurrentPath, '\0', PL_CORE_FILE_NAME_SIZE);
+
+                    strcpy(pcCurrentPath, a_pcDirectory);
+                    strcat(pcCurrentPath, "/");
+                    strcat(pcCurrentPath, psDirectoryContent->d_name);
+
+                    PRINT_INF("NAME FOLDERS: %s, ||||||||||| %s", psDirectoryContent->d_name, pcCurrentPath);
+
+                    //getFilesCountInDir(a_eExt,)
+                }
+            }
+            closedir(pDIrectory);
+        }
+    }
+    else
+    {
+        PRINT_ERR("getFilesCountInDir(), directory path not valid");
+    }
+
+    PRINT_INF("getFilesCountInDir(), found %u files", ui64Cntr);
+
+    return ui64Cntr;
+}
+
+eUSBErrorCode getFilesInDir_r(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int64 a_pSize, eExtension a_eExt, char *a_pcDirectory)
+{
+
 }
 
 pl_core_ID3v1 getID3v1Tag(char* a_pcFileName)
@@ -308,3 +396,5 @@ static void getID3v2Tag(char* a_pcFileName)
 
     return;
 }
+
+

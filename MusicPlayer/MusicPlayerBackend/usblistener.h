@@ -16,7 +16,7 @@ void usb_listenerRun();
 void usb_listenerStop();
 void usb_setCallbacs(usb_callbacsInterface a_sInterface);
 E_BOOL usb_mount(const char* a_pcDevNode, const char* a_pcDirectory);
-void usb_umount(char* a_pcDevNode);
+void usb_umount(char* a_pcDir);
 
 #endif // USBLISTENER
 

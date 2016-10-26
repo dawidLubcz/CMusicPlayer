@@ -138,7 +138,7 @@ int main()
 
         case 16:
         {
-            pl_core_createPlaylistFromDir("USB3");
+            pl_core_createPlaylistFromDir("/home/dawid/Documents/MusicPlayer/CMusicPlayer/build-MusicPlayer-Desktop-Debug/MusicPlayerBackend/USB");
         }break;
 
 

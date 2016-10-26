@@ -529,23 +529,27 @@ static char g_pcCurrentPartition[128] = {0};
 static void handleUSBConnected(const char* a_psNewPartition)
 {
     PRINT_INF("handleUSBConnected(), partition: %s", a_psNewPartition);
-    if(usb_mount(a_psNewPartition, "USB3"))
+
+    if(usb_mount(a_psNewPartition, "/home/dawid/Documents/MusicPlayer/CMusicPlayer/build-MusicPlayer-Desktop-Debug/MusicPlayerBackend/USB"))
     {
-        usleep(2000000);
         memset(g_pcCurrentPartition, '\0', 128);
         strcpy(g_pcCurrentPartition, a_psNewPartition);
 
-        //pl_core_stop();
-        //pl_core_createPlaylistFromDir("USB3");
-        //pl_core_setTrackWithIndex(0);
-        //pl_core_play();
+        pl_core_stop();
+        pl_core_createPlaylistFromDir("/home/dawid/Documents/MusicPlayer/CMusicPlayer/build-MusicPlayer-Desktop-Debug/MusicPlayerBackend/USB");
+        pl_core_setTrackWithIndex(0);
+        pl_core_play();
+
+        getFilesCountInDir_r(E_EXT_MP3, "/home/dawid/Documents/MusicPlayer/CMusicPlayer/build-MusicPlayer-Desktop-Debug/MusicPlayerBackend/USB");
     }
 }
 
 static void handleUSBDisconnected(const char* a_psRemovedPartition)
 {
     PRINT_INF("handleUSBDisconnected(), partition: %s", a_psRemovedPartition);
-    usb_umount("USB3");
+    usb_umount("/home/dawid/Documents/MusicPlayer/CMusicPlayer/build-MusicPlayer-Desktop-Debug/MusicPlayerBackend/USB");
+    pl_core_stop();
+    pl_core_unload();
 }
 
 void notifyListenersListReady(uint64_t a_u64Count)

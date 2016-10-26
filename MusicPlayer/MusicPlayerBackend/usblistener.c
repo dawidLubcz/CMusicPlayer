@@ -97,7 +97,7 @@ void usb_listenerRun()
 
         if (iSelectRes > 0 && FD_ISSET(g_iDeviceFileDescriptor, &fds))
         {
-            printf("\nselect() says there should be data\n");
+            PRINT_INF("usbListenerRun(), says there should be data");
 
             struct udev_device *pDevice;
             pDevice = udev_monitor_receive_device(g_pUdeviceMonitor);
@@ -148,27 +148,53 @@ void usb_listenerRun()
 E_BOOL usb_mount(const char* a_pcDevNode, const char* a_pcDirectory)
 {
     E_BOOL eResult = FALSE;
-    if(mount(a_pcDevNode, a_pcDirectory, "vfat", MS_NOATIME, NULL))
+    int iRetCode = -1;
+    int iCntr = 0;
+
+    PRINT_INF("usb_mount(), node: %s, dir: %s", a_pcDevNode, a_pcDirectory);
+
+    while(0 > iRetCode && 3 > iCntr)
     {
-        PRINT_ERR("Mount failed");
+        iRetCode = mount(a_pcDevNode, a_pcDirectory, "vfat", MS_SYNCHRONOUS, NULL);
+        if(-1 == iRetCode)
+        {
+            PRINT_ERR("Mount failed, cntr: %d, ret: %d", iCntr, iRetCode);
+
+            iRetCode = mount(a_pcDevNode, a_pcDirectory, "vfat", MS_MOVE, NULL);
+            PRINT_ERR("Mount, moving ret: %d", iRetCode);
+        }
+        else
+        {
+            eResult = TRUE;
+            PRINT_INF("Mount successful");
+        }
+        usleep(1000000); //1s
+        ++iCntr;
     }
-    else
-    {
-        eResult = TRUE;
-        PRINT_INF("Mount successful");
-    }
+
     return eResult;
 }
 
-void usb_umount(char* a_pcDevNode)
+void usb_umount(char* a_pcDir)
 {
-    if(umount(a_pcDevNode))
+    int iRetCode = -1;
+    int iCntr = 0;
+
+    PRINT_ERR("usb_umount(), dir: %s", a_pcDir);
+
+    while(0 > iRetCode && 3 > iCntr)
     {
-        PRINT_ERR("Umount failed");
-    }
-    else
-    {
-        PRINT_INF("Umount successful");
+        iRetCode = umount(a_pcDir);
+        if(iRetCode)
+        {
+            PRINT_ERR("Umount failed, cntr: %d, ret: %d", iCntr, iRetCode);
+        }
+        else
+        {
+            PRINT_INF("Umount successful");
+        }
+        usleep(1000000); //1s
+        ++iCntr;
     }
 }
 
