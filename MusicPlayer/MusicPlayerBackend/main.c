@@ -12,7 +12,17 @@ void filesListHandler(uint64_t a_u64Size)
 
     pl_core_getPlaylistItems(itemsArray, u8Size);
 
-    for(unsigned int i = 0; i < u8Size; ++i)
+    unsigned int size = 0;
+    if(a_u64Size < u8Size)
+    {
+        size = a_u64Size;
+    }
+    else
+    {
+        size = u8Size;
+    }
+
+    for(unsigned int i = 0; i < size; ++i)
     {
         printf("Track nr: %d -> %s\n",i, itemsArray[i].m_pcName);
     }
@@ -38,7 +48,7 @@ int main()
     int iOption = 0;
     do
     {
-        printf("Choose an option:\n 0->PLAY\n1->STOP\n2->PAUSE\n3->NEXT\n4->PREV\n5->SET_TRACK\n6->UNLOAD\n-1->QUIT\n7->Vol Up\n8->Vol Down\n9->SetVol\n10->List files\n11->List MP3\n12->set track with index\n13->set time position\n14->repeat ALL\n15->repeat ONE\n16->list folder\n");
+        printf("Choose an option:\n 0->PLAY\n1->STOP\n2->PAUSE\n3->NEXT\n4->PREV\n5->SET_TRACK\n6->UNLOAD\n-1->QUIT\n7->Vol Up\n8->Vol Down\n9->SetVol\n10->List files\n11->List MP3\n12->set track with index\n13->set time position\n14->repeat ALL\n15->repeat ONE\n16->list folder\n17->list folder R\n");
         scanf("%d", &iOption);
 
         switch(iOption)
@@ -141,6 +151,10 @@ int main()
             pl_core_createPlaylistFromDir("/home/dawid/Documents/MusicPlayer/CMusicPlayer/build-MusicPlayer-Desktop-Debug/MusicPlayerBackend/USB");
         }break;
 
+        case 17:
+        {
+            pl_core_createPlaylistFromDir_r("/home/dawid/Documents/MusicPlayer/CMusicPlayer/build-MusicPlayer-Desktop-Debug/MusicPlayerBackend/USB");
+        }break;
 
         case -1:
         {

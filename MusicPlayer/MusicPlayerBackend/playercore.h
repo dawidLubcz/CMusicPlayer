@@ -69,6 +69,7 @@ void pl_core_setVol(int a_iVol);
 void pl_core_createPlayListInCurrDir();
 void pl_core_createMP3PlaylistInCurrDir();
 void pl_core_createPlaylistFromDir(char* a_pcFolderWithPath);
+void pl_core_createPlaylistFromDir_r(char *a_pcFolderWithPath);
 void pl_core_getPlaylistItems(pl_core_MediaFileStruct* a_pItemsArray, uint64_t a_u64MaxSize);
 void pl_core_setRepeat(eRepeat a_eRepeat);
 
@@ -99,6 +100,7 @@ typedef enum
     E_SET_TRACK_INDEX,
     E_QUEUE_STOP,
     E_PLAYLIST_CREATE_EX,
+    E_PLAYLIST_CREATE_EX_R,
     E_MAX
 }E_PLAYER_COMMAND_t;
 
