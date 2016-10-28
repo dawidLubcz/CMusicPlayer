@@ -97,8 +97,6 @@ void usb_listenerRun()
 
         if (iSelectRes > 0 && FD_ISSET(g_iDeviceFileDescriptor, &fds))
         {
-            PRINT_INF("usbListenerRun(), says there should be data");
-
             struct udev_device *pDevice;
             pDevice = udev_monitor_receive_device(g_pUdeviceMonitor);
             if (pDevice)
@@ -126,11 +124,13 @@ void usb_listenerRun()
                     }
                 }
 
-                printf("   Got Device\n");
-                printf("   Node: %s\n", pcDevNode);
-                printf("   Subsystem: %s\n", udev_device_get_subsystem(pDevice));
-                printf("   Devtype: %s\n", pcDevType);
-                printf("   Action: %s\n", pcDevAction);
+                PRINT_INF("+---------------+");
+                PRINT_INF("Got Device");
+                PRINT_INF("Node: %s", pcDevNode);
+                PRINT_INF("Subsystem: %s", udev_device_get_subsystem(pDevice));
+                PRINT_INF("Devtype: %s", pcDevType);
+                PRINT_INF("Action: %s", pcDevAction);
+                PRINT_INF("+---------------+\n");
                 udev_device_unref(pDevice);
             }
             else
@@ -138,7 +138,6 @@ void usb_listenerRun()
                 printf("No Device from receive_device(). An error occured.\n");
             }
         }
-
         usleep(250*1000);
         fflush(stdout);
     }

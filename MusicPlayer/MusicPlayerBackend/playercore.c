@@ -347,8 +347,18 @@ void *threadQueue(void *arg)
             break;
         }
 
+        PRINT_INF("threadQueue(), wait...");
         sData_t sMsg = *((sData_t*)g_async_queue_pop(g_psAsyncInterfaceQueue)); // blocking
-        g_apAPIHandlersArray[sMsg.eCommand](sMsg.uParam);
+
+        if(E_MAX > sMsg.eCommand)
+        {
+            g_apAPIHandlersArray[sMsg.eCommand](sMsg.uParam);
+            PRINT_INF("threadQueue(), got msg: %d", sMsg.eCommand);
+        }
+        else
+        {
+            PRINT_ERR("threadQueue(), INVALID INDEX: %d", sMsg.eCommand);
+        }
 
         if(QUEUE_EXIT == sMsg.uParam.i32Param)
         {
@@ -439,13 +449,13 @@ void handleStop(uDataParams_t a_sParams)
 
 void handlePause(uDataParams_t a_sParams)
 {
-    PRINT_INF("handlePause(), %d", a_sParams.i32Param);
+    PRINT_INF("handlePause()%d", a_sParams.i32Param);
     gst_pl_pause();
 }
 
 void handleNext(uDataParams_t a_sParams)
 {
-    PRINT_INF("handleNext(), %d", a_sParams.i32Param);
+    PRINT_INF("handleNext()");
 
     if(0 != g_oCurrentPlaylist.m_psCurrentTrackListGArray && (g_oCurrentPlaylist.m_u64CurrentPlaylistIndex + 1) < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
     {
@@ -467,7 +477,7 @@ void handleNext(uDataParams_t a_sParams)
 
 void handlePrev(uDataParams_t a_sParams)
 {
-    PRINT_INF("handlePrev(), %d", a_sParams.i32Param);
+    PRINT_INF("handlePrev()");
 
     if(0 != g_oCurrentPlaylist.m_psCurrentTrackListGArray && g_oCurrentPlaylist.m_u64CurrentPlaylistIndex < g_oCurrentPlaylist.m_u64CurrentPlaylistSize && (g_oCurrentPlaylist.m_u64CurrentPlaylistIndex -1) < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
     {
@@ -666,17 +676,14 @@ static void handlePlaylistFromDir(uDataParams_t a_sParams)
 
 static void handlePlaylistFromDir_r(uDataParams_t a_sParams)
 {
-    PRINT_ERR("handlePlaylistFromDir(), DUPA1");
     if(0 != a_sParams.paBuffer)
     {
         clearCurrentPlaylist();
 
-        PRINT_ERR("handlePlaylistFromDir(), DUPA2");
-
         g_oCurrentPlaylist.m_psCurrentTrackListGArray = g_array_new(FALSE, FALSE, sizeof(pl_core_MediaFileStruct));
-        uint64_t u64Count = getFilesInDir_G_R(g_oCurrentPlaylist.m_psCurrentTrackListGArray, E_EXT_ALL, a_sParams.paBuffer);
+        g_oCurrentPlaylist.m_u64CurrentPlaylistSize = getFilesInDir_G_R(g_oCurrentPlaylist.m_psCurrentTrackListGArray, E_EXT_ALL, a_sParams.paBuffer);
 
-        PRINT_INF("handlePlaylistFromDir(), size: %s, %u", a_sParams.paBuffer, u64Count);
+        PRINT_INF("handlePlaylistFromDir(), size: %s, %u", a_sParams.paBuffer, g_oCurrentPlaylist.m_u64CurrentPlaylistSize);
     }
     else
     {
@@ -722,7 +729,9 @@ void pushSave(sData_t a_sMsg)
 
 void pushToQueue(E_PLAYER_COMMAND_t a_eCommand)
 {
-    sData_t sMsg;
+    PRINT_INF("pushToQueue(), %d", a_eCommand);
+
+    static sData_t sMsg; // it has to be static because poiter is added to queue in pushSave()
     sMsg.eCommand = a_eCommand;
     sMsg.uParam.i32Param = 0;
     pushSave(sMsg);
