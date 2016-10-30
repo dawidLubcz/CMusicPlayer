@@ -3,6 +3,7 @@
 #include "sdlplayer.h"
 #include "mediafilesbrowser.h"
 #include "usblistener.h"
+#include "gstplayer.h"
 
 #include <sys/types.h>
 #include <sys/ipc.h>
@@ -15,8 +16,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "gstplayer.h"
-
 #undef PRINT_PREFIX
 #define PRINT_PREFIX "MP:appCore: "
 
@@ -26,26 +25,54 @@
 
 typedef void (*handlerPointer)(uDataParams_t);
 
-typedef struct _sCurrentPlaylist
+typedef enum _eSourceID
+{
+    E_ID_UNKNOWN = -1,
+    E_ID_FILESYS = 0,
+    E_ID_USB,
+    E_ID_MAX
+}eSourceID;
+
+typedef struct _sPlaylist
 {
     GArray*  m_psCurrentTrackListGArray;
     uint64_t m_u64CurrentPlaylistSize;
     uint64_t m_u64CurrentPlaylistIndex;
-}sCurrentPlaylist;
+}sPlaylist;
 
 typedef struct _sPlaybackOptions
 {
-    int32_t m_eRepeat;
+    eRepeat m_eRepeat;
+    eBool   m_eShuffle;
 }sPlaybackOptions;
+
+typedef struct _sSourceInfo
+{
+    eBool m_eIsAvailable;
+    eBool m_eIsActive;
+    eSourceID m_eSourceID;
+    sPlaylist m_oPlaylist;
+    sPlaybackOptions m_oPlayBackOpt;
+}sSourceInfo;
+
+typedef struct _sFileSystem
+{
+    sSourceInfo m_oSourceInfo;
+    char m_pcStartFolder[PL_CORE_FILE_NAME_SIZE];
+    char m_pcLastFolder[PL_CORE_FILE_NAME_SIZE];
+}sFileSystem;
 
 typedef struct _sUSBSource
 {
-    pthread_t m_oUSBListenerThread;
+    pthread_t   m_oUSBListenerThread;
+    sSourceInfo m_oSourceInfo;
+    eBool       m_eWasMounted;
 }sUSBSource;
 
 typedef struct _sSources
 {
-    sUSBSource m_sUSB;
+    sUSBSource  m_sUSB;
+    sFileSystem m_sFileSys;
 }sSources;
 
 static const char*     g_pcMsqQueueFile    = "msgQueueFile";
@@ -60,12 +87,12 @@ static GAsyncQueue*    g_psAsyncInterfaceQueue  = 0;
 static GList*          g_psListenersList        = 0;
 static pthread_mutex_t g_sPlayerQueueMutex = PTHREAD_MUTEX_INITIALIZER;
 
-static sCurrentPlaylist g_oCurrentPlaylist = {0};
+static sPlaylist        g_oCurrentPlaylist = {0};
 static sPlaybackOptions g_oPlaybackOptions = {E_REPEAT_ALL};
 static sSources         g_oSupportedSources = {0};
 
 /// private functions
-static E_ERROR_CODE appCoreInitQueue();
+static eErrCode appCoreInitQueue();
 static void* threadIPC(void *arg);
 static void* threadQueue(void *arg);
 static void notifyListenersListReady(uint64_t a_u64Count);
@@ -146,7 +173,7 @@ void initializeGstObserver()
     gst_pl_setListenerFunctions(oInterface);
 }
 
-void initializeSources()
+void initializeUSBSource()
 {
     sUSBSource sUSB;
     g_oSupportedSources.m_sUSB = sUSB;
@@ -159,13 +186,13 @@ void initializeSources()
     usb_setCallbacs(sInterface);
 }
 
-E_ERROR_CODE pl_core_initialize()
+eErrCode pl_core_initialize()
 {
-    E_ERROR_CODE eResult = ERR_OK;
+    eErrCode eResult = ERR_OK;
 
     gst_pl_Initialize();
     initializeGstObserver();
-    initializeSources();
+    initializeUSBSource();
 
     g_psAsyncInterfaceQueue = g_async_queue_new ();
 
@@ -177,7 +204,7 @@ E_ERROR_CODE pl_core_initialize()
     return eResult;
 }
 
-E_ERROR_CODE pl_core_deinitialize()
+eErrCode pl_core_deinitialize()
 {
     pl_core_stopPlayerQueue();
     gst_pl_Deinitialize();
@@ -201,17 +228,17 @@ E_ERROR_CODE pl_core_deinitialize()
     return ERR_NOK;
 }
 
-E_ERROR_CODE pl_core_initIpcInterface()
+eErrCode pl_core_initIpcInterface()
 {
-    E_ERROR_CODE eResult = appCoreInitQueue();
+    eErrCode eResult = appCoreInitQueue();
     return eResult;
 }
 
-E_ERROR_CODE pl_core_deinitIpcInterface()
+eErrCode pl_core_deinitIpcInterface()
 {
     PRINT_INF("deinit()");
 
-    E_ERROR_CODE eResult = ERR_OK;
+    eErrCode eResult = ERR_OK;
     if(-1 == msgctl(g_i32MsgQueueID, IPC_RMID, NULL))
     {
         eResult = ERR_NOK;
@@ -307,10 +334,10 @@ void pl_core_runUSBListener()
     return;
 }
 
-E_ERROR_CODE appCoreInitQueue()
+eErrCode appCoreInitQueue()
 {
     key_t u32MsgQueueKey = -1;
-    E_ERROR_CODE i32Result = ERR_NOK;
+    eErrCode i32Result = ERR_NOK;
 
     u32MsgQueueKey = ftok(g_pcMsqQueueFile, g_cProjectID);
     if(-1 < u32MsgQueueKey)
@@ -580,9 +607,9 @@ static void handleUSBDisconnected(const char* a_psRemovedPartition)
 {
     if(g_iUsbMounted)
     {
-        usb_umount(g_pcUsbMountDir);
         pl_core_stop();
         pl_core_unload();
+        usb_umount(g_pcUsbMountDir);
 
         PRINT_INF("handleUSBDisconnected(), partition: %s", a_psRemovedPartition);
     }
@@ -620,9 +647,9 @@ void notifyListenersTrackInfoReady(pl_core_ID3v1 a_sTrackInfo)
     }
 }
 
-E_BOOL clearCurrentPlaylist()
+eBool clearCurrentPlaylist()
 {
-    E_BOOL eResult = FALSE;
+    eBool eResult = FALSE;
 
     if(0 != g_oCurrentPlaylist.m_psCurrentTrackListGArray && 0 < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
     {
@@ -641,7 +668,7 @@ void handlePlayListCreate(uDataParams_t a_sParams)
     clearCurrentPlaylist();
 
     g_oCurrentPlaylist.m_psCurrentTrackListGArray = g_array_new(FALSE, FALSE, sizeof(pl_core_MediaFileStruct));
-    g_oCurrentPlaylist.m_u64CurrentPlaylistSize = getFilesInCurrentDir_G(g_oCurrentPlaylist.m_psCurrentTrackListGArray, E_EXT_ALL);
+    g_oCurrentPlaylist.m_u64CurrentPlaylistSize = pl_br_getFilesInCurrentDir_G(g_oCurrentPlaylist.m_psCurrentTrackListGArray, E_EXT_ALL);
     notifyListenersListReady(g_oCurrentPlaylist.m_u64CurrentPlaylistSize);
 }
 
@@ -652,7 +679,7 @@ void handleMp3PlaylistCreate(uDataParams_t a_sParams)
     clearCurrentPlaylist();
 
     g_oCurrentPlaylist.m_psCurrentTrackListGArray = g_array_new(FALSE, FALSE, sizeof(pl_core_MediaFileStruct));
-    g_oCurrentPlaylist.m_u64CurrentPlaylistSize = getFilesInCurrentDir_G(g_oCurrentPlaylist.m_psCurrentTrackListGArray, E_EXT_MP3);
+    g_oCurrentPlaylist.m_u64CurrentPlaylistSize = pl_br_getFilesInCurrentDir_G(g_oCurrentPlaylist.m_psCurrentTrackListGArray, E_EXT_MP3);
     notifyListenersListReady(g_oCurrentPlaylist.m_u64CurrentPlaylistSize);
 }
 
@@ -663,7 +690,7 @@ static void handlePlaylistFromDir(uDataParams_t a_sParams)
         clearCurrentPlaylist();
 
         g_oCurrentPlaylist.m_psCurrentTrackListGArray = g_array_new(FALSE, FALSE, sizeof(pl_core_MediaFileStruct));
-        uint64_t u64Count = getFilesInDir_G(g_oCurrentPlaylist.m_psCurrentTrackListGArray, E_EXT_ALL, a_sParams.paBuffer);
+        uint64_t u64Count = pl_br_getFilesInDir_G(g_oCurrentPlaylist.m_psCurrentTrackListGArray, E_EXT_ALL, a_sParams.paBuffer);
 
         PRINT_INF("handlePlaylistFromDir(), size: %s, %u", a_sParams.paBuffer, u64Count);
     }
@@ -681,7 +708,7 @@ static void handlePlaylistFromDir_r(uDataParams_t a_sParams)
         clearCurrentPlaylist();
 
         g_oCurrentPlaylist.m_psCurrentTrackListGArray = g_array_new(FALSE, FALSE, sizeof(pl_core_MediaFileStruct));
-        g_oCurrentPlaylist.m_u64CurrentPlaylistSize = getFilesInDir_G_R(g_oCurrentPlaylist.m_psCurrentTrackListGArray, E_EXT_ALL, a_sParams.paBuffer);
+        g_oCurrentPlaylist.m_u64CurrentPlaylistSize = pl_br_getFilesInDir_G_R(g_oCurrentPlaylist.m_psCurrentTrackListGArray, E_EXT_ALL, a_sParams.paBuffer);
 
         PRINT_INF("handlePlaylistFromDir(), size: %s, %u", a_sParams.paBuffer, g_oCurrentPlaylist.m_u64CurrentPlaylistSize);
     }
@@ -739,7 +766,9 @@ void pushToQueue(E_PLAYER_COMMAND_t a_eCommand)
 
 void pushToQueueString(E_PLAYER_COMMAND_t a_eCommand, char* a_psStr)
 {
-    sData_t sMsg;
+    PRINT_INF("pushToQueueString(), %d", a_eCommand);
+
+    static sData_t sMsg;
     sMsg.eCommand = a_eCommand;
     strcpy(sMsg.uParam.paBuffer, a_psStr);
     pushSave(sMsg);
@@ -747,7 +776,9 @@ void pushToQueueString(E_PLAYER_COMMAND_t a_eCommand, char* a_psStr)
 
 void pushToQueueU64(E_PLAYER_COMMAND_t a_eCommand, uint64_t a_u64Param)
 {
-    sData_t sMsg;
+    PRINT_INF("pushToQueueU64(), %d", a_eCommand);
+
+    static sData_t sMsg;
     sMsg.eCommand = a_eCommand;
     sMsg.uParam.u64Param = a_u64Param;
     pushSave(sMsg);
@@ -755,7 +786,9 @@ void pushToQueueU64(E_PLAYER_COMMAND_t a_eCommand, uint64_t a_u64Param)
 
 void pushToQueueI32(E_PLAYER_COMMAND_t a_eCommand, int32_t a_i32Param)
 {
-    sData_t sMsg;
+    PRINT_INF("pushToQueueI32(), %d", a_eCommand);
+
+    static sData_t sMsg;
     sMsg.eCommand = a_eCommand;
     sMsg.uParam.i32Param = a_i32Param;
     pushSave(sMsg);

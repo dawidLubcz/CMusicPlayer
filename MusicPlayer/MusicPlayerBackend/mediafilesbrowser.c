@@ -25,7 +25,7 @@ static char* g_aExtensionsTable[E_EXT_ALL + 1] =
 static pl_core_ID3v1 getID3v1Tag(const char *a_pcFileName);
 static void getID3v2Tag(char* a_pcFileName);
 
-u_int64 getFilesCountInDir(eExtension a_eExt, char* a_pcDirectory)
+u_int64 pl_br_getFilesCountInDir(eExtension a_eExt, char* a_pcDirectory)
 {
     u_int64 ui64Cntr = 0;
 
@@ -72,13 +72,13 @@ u_int64 getFilesCountInDir(eExtension a_eExt, char* a_pcDirectory)
     return ui64Cntr;
 }
 
-u_int64 getFilesCountInCurrDir(eExtension a_eExt)
+u_int64 pl_br_getFilesCountInCurrDir(eExtension a_eExt)
 {
-    u_int64 ui64Cntr = getFilesCountInDir(a_eExt, ".");
+    u_int64 ui64Cntr = pl_br_getFilesCountInDir(a_eExt, ".");
     return ui64Cntr;
 }
 
-eUSBErrorCode getFilesInDir(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int64 a_pSize, eExtension a_eExt, char* a_pcDirectory)
+eUSBErrorCode pl_br_getFilesInDir(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int64 a_pSize, eExtension a_eExt, char* a_pcDirectory)
 {
     // check params
     assert(0 != a_psMediaFilesArray);
@@ -103,7 +103,7 @@ eUSBErrorCode getFilesInDir(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int6
             // search only for regular files
             if(DT_REG == psDirectoryContent->d_type)
             {
-                E_BOOL eFound = FALSE;
+                eBool eFound = FALSE;
 
                 if(E_EXT_ALL == a_eExt)
                 {
@@ -161,13 +161,13 @@ eUSBErrorCode getFilesInDir(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int6
     return E_ERR_OK;
 }
 
-uint64_t getFilesInCurrentDir_G(GArray *a_psMediaFilesArray, eExtension a_eExt)
+uint64_t pl_br_getFilesInCurrentDir_G(GArray *a_psMediaFilesArray, eExtension a_eExt)
 {
-    uint64_t u64Res = getFilesInDir_G(a_psMediaFilesArray, a_eExt, ".");
+    uint64_t u64Res = pl_br_getFilesInDir_G(a_psMediaFilesArray, a_eExt, ".");
     return u64Res;
 }
 
-uint64_t getFilesInDir_G(GArray *a_psMediaFilesArray, eExtension a_eExt, char *a_pcDirectory)
+uint64_t pl_br_getFilesInDir_G(GArray *a_psMediaFilesArray, eExtension a_eExt, char *a_pcDirectory)
 {
     uint64_t u64Cntr = 0; // counter
 
@@ -197,7 +197,7 @@ uint64_t getFilesInDir_G(GArray *a_psMediaFilesArray, eExtension a_eExt, char *a
             // search only for regular files
             if(DT_REG == psDirectoryContent->d_type)
             {
-                E_BOOL eFound = FALSE;
+                eBool eFound = FALSE;
 
                 if(E_EXT_ALL == a_eExt)
                 {
@@ -269,7 +269,7 @@ static int ntwCallbackFolder(const char *a_pcFpath, const struct stat *a_psStat,
         {
             //PRINT_INF("FILENAME => %s, %s", a_pcFpath, a_pcFpath + a_psFTWbuf->base);
 
-            E_BOOL eFound = FALSE;
+            eBool eFound = FALSE;
 
             if(E_EXT_ALL == g_eExt)
             {
@@ -307,7 +307,7 @@ static int ntwCallbackFolder(const char *a_pcFpath, const struct stat *a_psStat,
     return 0;
 }
 
-uint64_t getFilesInDir_G_R(GArray *a_psMediaFilesArray, eExtension a_eExt, char *a_pcDirectory)
+uint64_t pl_br_getFilesInDir_G_R(GArray *a_psMediaFilesArray, eExtension a_eExt, char *a_pcDirectory)
 {
     int iFlags    = 0;
     g_u64FileCntr = 0;
@@ -320,19 +320,19 @@ uint64_t getFilesInDir_G_R(GArray *a_psMediaFilesArray, eExtension a_eExt, char 
     return g_u64FileCntr;
 }
 
-eUSBErrorCode getFilesInCurrentDir(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int64 a_pSize, eExtension a_eExt)
+eUSBErrorCode pl_br_getFilesInCurrentDir(pl_core_MediaFileStruct *a_psMediaFilesArray, u_int64 a_pSize, eExtension a_eExt)
 {
-    getFilesInDir(a_psMediaFilesArray, a_pSize, a_eExt, ".");
+    pl_br_getFilesInDir(a_psMediaFilesArray, a_pSize, a_eExt, ".");
     return E_ERR_OK;
 }
 
-uint64_t getFilesInCurrentDir_G_R(GArray *a_psMediaFilesArray, eExtension a_eExt)
+uint64_t pl_br_getFilesInCurrentDir_G_R(GArray *a_psMediaFilesArray, eExtension a_eExt)
 {
-    uint64_t u64Cntr = getFilesInDir_G_R(a_psMediaFilesArray, a_eExt, ".");
+    uint64_t u64Cntr = pl_br_getFilesInDir_G_R(a_psMediaFilesArray, a_eExt, ".");
     return u64Cntr;
 }
 
-u_int64 getFilesCountInDir_r(eExtension a_eExt, char *a_pcDirectory)
+u_int64 pl_br_getFilesCountInDir_r(eExtension a_eExt, char *a_pcDirectory)
 {
     u_int64 ui64Cntr = 0;
 
@@ -378,7 +378,7 @@ u_int64 getFilesCountInDir_r(eExtension a_eExt, char *a_pcDirectory)
 
                     //PRINT_INF("FOLDER -> %s", pcCurrentPath);
 
-                    ui64Cntr += getFilesCountInDir_r(a_eExt, pcCurrentPath);
+                    ui64Cntr += pl_br_getFilesCountInDir_r(a_eExt, pcCurrentPath);
                 }
             }
             closedir(pDIrectory);

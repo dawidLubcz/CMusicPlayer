@@ -19,7 +19,7 @@
 #define ACTION_ADD "add"
 
 static usb_callbacsInterface g_oInterface = {0};
-static E_BOOL g_eInterfaceWasSet = FALSE;
+static eBool g_eInterfaceWasSet = eFALSE;
 
 static const char* g_cpcUdeviceName = "udev";
 static const char* g_cpcPartitionName = "partition";
@@ -36,12 +36,12 @@ void usb_setCallbacs(usb_callbacsInterface a_sInterface)
     if(a_sInterface.m_pfPartitionConnected != 0 && a_sInterface.m_pfPartitionDisconnected != 0)
     {
         g_oInterface = a_sInterface;
-        g_eInterfaceWasSet = TRUE;
+        g_eInterfaceWasSet = eTRUE;
         PRINT_INF("usb_setCallbacs(), OK");
     }
     else
     {
-        g_eInterfaceWasSet = FALSE;
+        g_eInterfaceWasSet = eFALSE;
         PRINT_INF("usb_setCallbacs(), FAILED");
     }
 }
@@ -143,9 +143,9 @@ void usb_listenerRun()
     }
 }
 
-E_BOOL usb_mount(const char* a_pcDevNode, const char* a_pcDirectory)
+eBool usb_mount(const char* a_pcDevNode, const char* a_pcDirectory)
 {
-    E_BOOL eResult = FALSE;
+    eBool eResult = eFALSE;
     int iRetCode = -1;
     int iCntr = 0;
 
@@ -163,7 +163,7 @@ E_BOOL usb_mount(const char* a_pcDevNode, const char* a_pcDirectory)
         }
         else
         {
-            eResult = TRUE;
+            eResult = eTRUE;
             PRINT_INF("Mount successful");
         }
         usleep(1000000); //1s

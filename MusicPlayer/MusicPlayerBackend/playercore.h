@@ -51,8 +51,8 @@ typedef struct
     pl_core_playingTrackInfo pfTrackInfoReady;
 }pl_core_listenerInterface;
 
-E_ERROR_CODE pl_core_initialize();
-E_ERROR_CODE pl_core_deinitialize();
+eErrCode pl_core_initialize();
+eErrCode pl_core_deinitialize();
 
 void pl_core_play();
 void pl_core_stop();
@@ -123,8 +123,8 @@ typedef struct
     sData_t mmsg;
 }sMessage_t;
 
-E_ERROR_CODE pl_core_initIpcInterface();
-E_ERROR_CODE pl_core_deinitIpcInterface();
+eErrCode pl_core_initIpcInterface();
+eErrCode pl_core_deinitIpcInterface();
 void pl_core_runIpcThread();
 void pl_core_stopIpcThread();
 

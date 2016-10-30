@@ -6,15 +6,15 @@
 
 typedef enum
 {
-    FALSE = 0,
-    TRUE
-}E_BOOL;
+    eFALSE = 0,
+    eTRUE
+}eBool;
 
 typedef enum
 {
     ERR_OK = 0,
     ERR_NOK = -1
-}E_ERROR_CODE;
+}eErrCode;
 
 #endif // COMMON
 

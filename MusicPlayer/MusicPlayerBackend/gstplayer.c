@@ -31,20 +31,20 @@ typedef struct _sAudioData
 typedef struct _sCurrentState
 {
     gdouble m_dVolume;
-    E_BOOL  m_fIsSeeking;
+    eBool  m_fIsSeeking;
 }sCurrentState;
 
 typedef struct _sMessageThread
 {
     pthread_t   m_oGstMessageLoopThread;
-    E_BOOL      m_fIsRunning;
+    eBool      m_fIsRunning;
 }sMessageThread;
 
 /// GLOBALS
 static sAudioData g_oGstCurrentAudioData;
 static GMainLoop *g_pLoop;
-static E_BOOL g_eInitialized = FALSE;
-static E_BOOL g_eTrackWasSet = FALSE;
+static eBool g_eInitialized = FALSE;
+static eBool g_eTrackWasSet = FALSE;
 static sCurrentState g_oState = {0};
 static sMessageThread g_oMessageThread = {0};
 static gst_pl_sListenerInterface g_oPlayerCallbacs = {0};
@@ -120,9 +120,9 @@ void *gst_pl_messageThreadFunc(void *threadid)
     return threadid;
 }
 
-E_BOOL gst_pl_stopMessageThread()
+eBool gst_pl_stopMessageThread()
 {
-    E_BOOL eRetVal = FALSE;
+    eBool eRetVal = FALSE;
 
     if(g_oMessageThread.m_fIsRunning)
     {
@@ -138,9 +138,9 @@ E_BOOL gst_pl_stopMessageThread()
     return eRetVal;
 }
 
-E_BOOL gst_pl_startMessageThread()
+eBool gst_pl_startMessageThread()
 {
-    E_BOOL eRetVal = FALSE;
+    eBool eRetVal = FALSE;
 
     if(!g_oMessageThread.m_fIsRunning)
     {

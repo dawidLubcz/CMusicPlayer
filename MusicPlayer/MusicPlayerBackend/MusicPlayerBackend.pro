@@ -14,17 +14,20 @@ SOURCES += main.c \
     usblistener.c \
     playercore.c \
     gstplayer.c \
-    sldplayer.c
+    sldplayer.c \
+    multimediacache.c \
+    multimediacacheusb.c
 
 HEADERS += \
-    mediaFilesBrowserInterface.h \
     mediafilesbrowser.h \
     usblistener.h \
     logger.h \
     common.h \
     playercore.h \
     gstplayer.h \
-    sdlplayer.h
+    sdlplayer.h \
+    multimediacache.h \
+    multimediacacheusb.h
 
 LIBS += \
     -lSDL \
