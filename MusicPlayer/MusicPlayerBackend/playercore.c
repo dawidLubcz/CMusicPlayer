@@ -4,6 +4,7 @@
 #include "mediafilesbrowser.h"
 #include "usblistener.h"
 #include "gstplayer.h"
+#include "multimediacache.h"
 
 #include <sys/types.h>
 #include <sys/ipc.h>
@@ -24,14 +25,6 @@
 //////////////////////// GLOBALS ///////////////////////
 
 typedef void (*handlerPointer)(uDataParams_t);
-
-typedef enum _eSourceID
-{
-    E_ID_UNKNOWN = -1,
-    E_ID_FILESYS = 0,
-    E_ID_USB,
-    E_ID_MAX
-}eSourceID;
 
 typedef struct _sPlaylist
 {
@@ -164,6 +157,8 @@ void pl_core_cleanMemory()
     {
         PRINT_ERR("pl_core_cleanMemory(), already cleared");
     }
+
+    //pl_cache_deinit();
 }
 
 void initializeGstObserver()

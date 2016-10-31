@@ -1,14 +1,26 @@
-#include "multimediacacheusb.h"
+#include "multimediacachefilesys.h"
 #include "mediafilesbrowser.h"
 
 #include <string.h>
 
 #undef PRINT_PREFIX
-#define PRINT_PREFIX "MP:cacheUSB: "
+#define PRINT_PREFIX "MP:cacheSYS: "
 
 static struct sSourceInfo g_sSourceData = {0};
 
-struct sPlaylist *pl_cache_usb_GetPlaylist()
+struct sSourceInterface pl_cache_sys_createSYS()
+{
+    struct sSourceInterface sInterface = {.m_pfDestroy = pl_cache_sys_destroy,
+                                          .m_pfGetPlaylist = pl_cache_sys_GetPlaylist,
+                                          .m_pfNewPlaylistFromDirRec = pl_cache_sys_NewPlFromDirRec,
+                                          .m_pfNewPlaylistFromDir = pl_cache_sys_NewPlFromDir,
+                                          .m_pfGetTrackWithPath = pl_cache_sys_GetTrackWithPath,
+                                          .m_pfGetTrackDetails = pl_cache_sys_GetTrackDetails,
+                                          .m_pfSetRepeatRandom = pl_cache_sys_SetRepeatRandom};
+    return sInterface;
+}
+
+struct sPlaylist *pl_cache_sys_GetPlaylist()
 {
     return &g_sSourceData.m_oPlaylist;
 }
@@ -28,12 +40,12 @@ static eBool clearPlaylist()
         g_sSourceData.m_eHasPlaylist = eFALSE;
         eResult = eTRUE;
 
-        PRINT_INF("clearPlaylist() USB");
+        PRINT_INF("clearPlaylist() SYS");
     }
     return eResult;
 }
 
-int pl_cache_usb_NewPlFromDirRec(char * a_pcDir)
+int pl_cache_sys_NewPlFromDirRec(char *a_pcDir)
 {
     eBool eResult = eFALSE;
 
@@ -48,12 +60,12 @@ int pl_cache_usb_NewPlFromDirRec(char * a_pcDir)
     }
     else
     {
-        PRINT_ERR("pl_cache_usb_NewPlFromDirRec() invalid params");
+        PRINT_ERR("pl_cache_sys_NewPlFromDirRec() invalid params");
     }
     return (int)eResult;
 }
 
-int pl_cache_usb_NewPlFromDir(char *a_pcDir)
+int pl_cache_sys_NewPlFromDir(char *a_pcDir)
 {
     eBool eResult = eFALSE;
 
@@ -68,12 +80,12 @@ int pl_cache_usb_NewPlFromDir(char *a_pcDir)
     }
     else
     {
-        PRINT_ERR("pl_cache_usb_NewPlFromDirRec() invalid param");
+        PRINT_ERR("pl_cache_sys_NewPlFromDirRec() invalid param");
     }
     return (int)eResult;
 }
 
-int pl_cache_usb_GetTrackWithPath(char *a_pcData, int a_iIndex)
+int pl_cache_sys_GetTrackWithPath(char *a_pcData, int a_iIndex)
 {
     eBool eResult = eFALSE;
 
@@ -85,12 +97,12 @@ int pl_cache_usb_GetTrackWithPath(char *a_pcData, int a_iIndex)
     }
     else
     {
-        PRINT_ERR("pl_cache_usb_GetTrackWithPath(), invalid buffer");
+        PRINT_ERR("pl_cache_sys_GetTrackWithPath(), invalid buffer");
     }
     return (int)eResult;
 }
 
-int pl_cache_usb_GetTrackDetails(pl_core_MediaFileStruct *a_psData, int a_iIndex)
+int pl_cache_sys_GetTrackDetails(pl_core_MediaFileStruct *a_psData, int a_iIndex)
 {
     eBool eResult = eFALSE;
 
@@ -102,34 +114,22 @@ int pl_cache_usb_GetTrackDetails(pl_core_MediaFileStruct *a_psData, int a_iIndex
     }
     else
     {
-        PRINT_ERR("pl_cache_usb_GetTrackDetails(), invalid buffer");
+        PRINT_ERR("pl_cache_sys_GetTrackDetails(), invalid buffer");
     }
     return (int)eResult;
 }
 
-int pl_cache_usb_SetRepeatRandom(struct sPlaybackOptions a_sPlaybackOpt)
+int pl_cache_sys_SetRepeatRandom(struct sPlaybackOptions a_sPlaybackOpt)
 {
     g_sSourceData.m_oPlayBackOpt = a_sPlaybackOpt;
     return (int)eTRUE;
 }
 
-struct sSourceInterface pl_cache_usb_createUsb()
-{
-    struct sSourceInterface sInterface = {.m_pfDestroy = pl_cache_usb_destroy,
-                                          .m_pfGetPlaylist = pl_cache_usb_GetPlaylist,
-                                          .m_pfNewPlaylistFromDirRec = pl_cache_usb_NewPlFromDirRec,
-                                          .m_pfNewPlaylistFromDir = pl_cache_usb_NewPlFromDir,
-                                          .m_pfGetTrackWithPath = pl_cache_usb_GetTrackWithPath,
-                                          .m_pfGetTrackDetails = pl_cache_usb_GetTrackDetails,
-                                          .m_pfSetRepeatRandom = pl_cache_usb_SetRepeatRandom};
-    return sInterface;
-}
-
-void pl_cache_usb_destroy()
+void pl_cache_sys_destroy()
 {
     clearPlaylist();
 
     g_sSourceData.m_eIsActive = eFALSE;
 
-    PRINT_INF("pl_cache_sys_destroy(), USB");
+    PRINT_INF("pl_cache_sys_destroy(), SYS");
 }

@@ -16,7 +16,8 @@ SOURCES += main.c \
     gstplayer.c \
     sldplayer.c \
     multimediacache.c \
-    multimediacacheusb.c
+    multimediacacheusb.c \
+    multimediacachefilesys.c
 
 HEADERS += \
     mediafilesbrowser.h \
@@ -27,7 +28,8 @@ HEADERS += \
     gstplayer.h \
     sdlplayer.h \
     multimediacache.h \
-    multimediacacheusb.h
+    multimediacacheusb.h \
+    multimediacachefilesys.h
 
 LIBS += \
     -lSDL \

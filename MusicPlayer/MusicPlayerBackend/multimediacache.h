@@ -51,6 +51,8 @@ struct sSourceInterface
 
 void pl_cache_init(void);
 void pl_cache_deinit(void);
+void pl_cache_setActiveSource(eSourceID a_eSource);
+eSourceID pl_cache_getActiveSource();
 
 
 #endif // MULTIMEDIACACHE_H
