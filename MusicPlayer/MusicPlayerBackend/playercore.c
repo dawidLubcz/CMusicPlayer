@@ -195,6 +195,7 @@ eErrCode pl_core_initialize()
 
     pl_core_runPlayerQueue();
     pl_core_runUSBListener();
+    pl_cache_init();
 
     return eResult;
 }
@@ -203,6 +204,7 @@ eErrCode pl_core_deinitialize()
 {
     pl_core_stopPlayerQueue();
     gst_pl_Deinitialize();
+    pl_cache_deinit();
 
     pl_core_cleanMemory();
 
@@ -451,6 +453,9 @@ void handlePlay(uDataParams_t a_sParams)
     PRINT_INF("handlePlay(), %d", a_sParams.i32Param);
 
     gst_pl_play();
+
+    //pl_core_MediaFileStruct sData;
+    //pl_cache_getTrackDetails()
 
     if(0 < g_u8Initialized && 0 != g_oCurrentPlaylist.m_psCurrentTrackListGArray && 0 < g_oCurrentPlaylist.m_psCurrentTrackListGArray->len)
     {

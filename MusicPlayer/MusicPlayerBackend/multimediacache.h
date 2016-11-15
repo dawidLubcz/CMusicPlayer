@@ -47,13 +47,24 @@ struct sSourceInterface
     int (*m_pfGetTrackWithPath)(char*, int);
     int (*m_pfGetTrackDetails)(pl_core_MediaFileStruct*, int);
     int (*m_pfSetRepeatRandom)(struct sPlaybackOptions);
+    int (*m_pfSetPlIndex)(uint64_t);
+    int (*m_pfGetNextTrackPath)(char*);
+    int (*m_pfGetPrevTrackPath)(char*);
 };
 
-void pl_cache_init(void);
-void pl_cache_deinit(void);
-void pl_cache_setActiveSource(eSourceID a_eSource);
-eSourceID pl_cache_getActiveSource();
+void        pl_cache_init(void);
+void        pl_cache_deinit(void);
+void        pl_cache_setActiveSource(eSourceID a_eSource);
+eSourceID   pl_cache_getActiveSource();
 
+// base class implement interface to avoid invalid pointers
+void                pl_cache_destroyCurrentSource(void);
+void                pl_cache_getPlaylistCurrSource(struct sPlaylist* a_pcData);
+int                 pl_cache_newPlaylistFromDirRec(char*a_pcDir);
+int                 pl_cache_newPlaylistFromDir(char*a_pcDir);
+int                 pl_cache_getTrackWithPath(char*a_pcData, int a_iIndex);
+int                 pl_cache_getTrackDetails(pl_core_MediaFileStruct*a_psData, int a_iIndex);
+int                 pl_cache_setRepeatRandom(struct sPlaybackOptions a_sPlOpts);
 
 #endif // MULTIMEDIACACHE_H
 

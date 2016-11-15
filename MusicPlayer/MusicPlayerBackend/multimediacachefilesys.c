@@ -16,7 +16,10 @@ struct sSourceInterface pl_cache_sys_createSYS()
                                           .m_pfNewPlaylistFromDir = pl_cache_sys_NewPlFromDir,
                                           .m_pfGetTrackWithPath = pl_cache_sys_GetTrackWithPath,
                                           .m_pfGetTrackDetails = pl_cache_sys_GetTrackDetails,
-                                          .m_pfSetRepeatRandom = pl_cache_sys_SetRepeatRandom};
+                                          .m_pfSetRepeatRandom = pl_cache_sys_SetRepeatRandom,
+                                          .m_pfSetPlIndex = pl_cache_sys_SetPlIndex,
+                                          .m_pfGetNextTrackPath = pl_cache_sys_GetNextTrackPath,
+                                          .m_pfGetPrevTrackPath = pl_cache_sys_GetPrevTrackPath};
     return sInterface;
 }
 
@@ -132,4 +135,38 @@ void pl_cache_sys_destroy()
     g_sSourceData.m_eIsActive = eFALSE;
 
     PRINT_INF("pl_cache_sys_destroy(), SYS");
+}
+
+int pl_cache_sys_SetPlIndex(uint64_t a_iIndex)
+{
+    int iRetCode = 0;
+    if(g_sSourceData.m_oPlaylist.m_u64CurrentPlaylistSize > a_iIndex)
+    {
+        g_sSourceData.m_oPlaylist.m_u64CurrentPlaylistIndex = a_iIndex;
+        iRetCode = 1;
+    }
+    return iRetCode;
+}
+
+int pl_cache_sys_GetNextTrackPath(char *a_pcData)
+{
+    int iRetCode  = pl_cache_sys_GetTrackWithPath(a_pcData, ++g_sSourceData.m_oPlaylist.m_u64CurrentPlaylistIndex);
+    return iRetCode;
+}
+
+int pl_cache_sys_GetPrevTrackPath(char *a_pcData)
+{
+    int iRetCode = 0;
+
+    if(0 == g_sSourceData.m_oPlaylist.m_u64CurrentPlaylistIndex)
+    {
+        g_sSourceData.m_oPlaylist.m_u64CurrentPlaylistIndex = g_sSourceData.m_oPlaylist.m_u64CurrentPlaylistSize;
+    }
+
+    if(0 < g_sSourceData.m_oPlaylist.m_u64CurrentPlaylistIndex)
+    {
+        iRetCode  = pl_cache_sys_GetTrackWithPath(a_pcData, --g_sSourceData.m_oPlaylist.m_u64CurrentPlaylistIndex);
+    }
+
+    return iRetCode;
 }
