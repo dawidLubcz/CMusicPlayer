@@ -52,11 +52,11 @@ void pl_cache_destroyCurrentSource()
     g_aSourcesArray[g_eActiveSource].m_pfDestroy();
 }
 
-void pl_cache_getPlaylistCurrSource(struct sPlaylist* a_pcData)
+struct sPlaylist pl_cache_getPlaylistCurrSource(void)
 {
     CACHE_ASSERT;
-    assert(a_pcData);
-    a_pcData = g_aSourcesArray[g_eActiveSource].m_pfGetPlaylist();
+    struct sPlaylist sData = g_aSourcesArray[g_eActiveSource].m_pfGetPlaylist();
+    return sData;
 }
 
 int pl_cache_newPlaylistFromDirRec(char * a_pcDir)

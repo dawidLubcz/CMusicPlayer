@@ -5,7 +5,7 @@
 
 struct sSourceInterface pl_cache_usb_createUsb();
 
-struct sPlaylist* pl_cache_usb_GetPlaylist(void);
+struct sPlaylist  pl_cache_usb_GetPlaylist(void);
 int               pl_cache_usb_NewPlFromDirRec(char* a_pcDir);
 int               pl_cache_usb_NewPlFromDir(char* a_pcDir);
 int               pl_cache_usb_GetTrackWithPath(char* a_pcData, uint64_t a_iIndex);

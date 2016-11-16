@@ -8,9 +8,9 @@
 
 static struct sSourceInfo g_sSourceData = {0};
 
-struct sPlaylist *pl_cache_usb_GetPlaylist()
+struct sPlaylist pl_cache_usb_GetPlaylist()
 {
-    return &g_sSourceData.m_oPlaylist;
+    return g_sSourceData.m_oPlaylist;
 }
 
 static eBool clearPlaylist()

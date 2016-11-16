@@ -27,9 +27,11 @@ struct sSourceInterface pl_cache_sys_createSYS()
     return sInterface;
 }
 
-struct sPlaylist *pl_cache_sys_GetPlaylist()
+struct sPlaylist pl_cache_sys_GetPlaylist()
 {
-    return &g_sSourceData.m_oPlaylist;
+    PRINT_INF("pl_cache_sys_GetPlaylist(), P: 0x%x, size: %u, index: %u", g_sSourceData.m_oPlaylist.m_psCurrentTrackListGArray,
+              g_sSourceData.m_oPlaylist.m_u64CurrentPlaylistSize, g_sSourceData.m_oPlaylist.m_u64CurrentPlaylistIndex);
+    return g_sSourceData.m_oPlaylist;
 }
 
 static eBool clearPlaylist()
@@ -90,6 +92,8 @@ int pl_cache_sys_NewPlFromDir(char *a_pcDir)
 
         g_sSourceData.m_eHasPlaylist = eTRUE;
         iResult = g_sSourceData.m_oPlaylist.m_u64CurrentPlaylistSize;
+
+        PRINT_INF("pl_cache_sys_NewPlFromDir(), pl size: %d", g_sSourceData.m_oPlaylist.m_u64CurrentPlaylistSize);
     }
     else
     {

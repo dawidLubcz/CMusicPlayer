@@ -42,7 +42,7 @@ struct sSourceInfo
 struct sSourceInterface
 {
     void (*m_pfDestroy)(void);
-    struct sPlaylist* (*m_pfGetPlaylist)(void);
+    struct sPlaylist  (*m_pfGetPlaylist)(void);
     int (*m_pfNewPlaylistFromDirRec)(char*);
     int (*m_pfNewPlaylistFromDir)(char*);
     int (*m_pfGetTrackWithPath)(char*, uint64_t);
@@ -62,7 +62,7 @@ eSourceID   pl_cache_getActiveSource();
 
 // base class implement interface to avoid invalid pointers
 void                pl_cache_destroyCurrentSource(void);
-void                pl_cache_getPlaylistCurrSource(struct sPlaylist* a_pcData);
+struct sPlaylist    pl_cache_getPlaylistCurrSource(void);
 int                 pl_cache_newPlaylistFromDirRec(char*a_pcDir);
 int                 pl_cache_newPlaylistFromDir(char*a_pcDir);
 int                 pl_cache_getTrackWithPath(char*a_pcData, int a_iIndex);

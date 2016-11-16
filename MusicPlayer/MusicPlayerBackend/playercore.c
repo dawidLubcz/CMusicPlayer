@@ -454,9 +454,9 @@ void handlePlay(uDataParams_t a_sParams)
 
     gst_pl_play();
 
-   // pl_core_MediaFileStruct sData;
-   // pl_cache_getCurrTrackDetails(&sData);
-   // notifyListenersTrackInfoReady(sData.m_sTrackInfo);
+    pl_core_MediaFileStruct sData;
+    pl_cache_getCurrTrackDetails(&sData);
+    notifyListenersTrackInfoReady(sData.m_sTrackInfo);
 
     /*if(0 < g_u8Initialized && 0 != g_oCurrentPlaylist.m_psCurrentTrackListGArray && 0 < g_oCurrentPlaylist.m_psCurrentTrackListGArray->len)
     {
@@ -765,8 +765,7 @@ static void handlePlaylistFromDir_r(uDataParams_t a_sParams)
 
 void handleSetTrackWithIndex(uDataParams_t a_sParams)
 {
-    struct sPlaylist sPl;
-    pl_cache_getPlaylistCurrSource(&sPl);
+    struct sPlaylist sPl = pl_cache_getPlaylistCurrSource();
 
     PRINT_INF("handleSetTrackWithIndex(), index: %lu, pl_size: %u",a_sParams.i32Param, sPl.m_u64CurrentPlaylistSize);
 
