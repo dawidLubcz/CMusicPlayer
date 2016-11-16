@@ -34,6 +34,7 @@ HEADERS += \
 LIBS += \
     -lSDL \
     -lSDL_mixer \
+    -lm \
     -ludev \
     -lpthread\
     -lglib-2.0\

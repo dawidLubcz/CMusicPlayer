@@ -3,6 +3,7 @@
 
 #include <glib.h>
 #include <inttypes.h>
+#include <stdlib.h>
 
 #include "common.h"
 #include "playercore.h"
@@ -44,12 +45,14 @@ struct sSourceInterface
     struct sPlaylist* (*m_pfGetPlaylist)(void);
     int (*m_pfNewPlaylistFromDirRec)(char*);
     int (*m_pfNewPlaylistFromDir)(char*);
-    int (*m_pfGetTrackWithPath)(char*, int);
+    int (*m_pfGetTrackWithPath)(char*, uint64_t);
     int (*m_pfGetTrackDetails)(pl_core_MediaFileStruct*, int);
     int (*m_pfSetRepeatRandom)(struct sPlaybackOptions);
     int (*m_pfSetPlIndex)(uint64_t);
     int (*m_pfGetNextTrackPath)(char*);
     int (*m_pfGetPrevTrackPath)(char*);
+    int (*m_pfGetCurrTrackDetails)(pl_core_MediaFileStruct*);
+    void (*m_pfGetPlaylistItems)(pl_core_MediaFileStruct*, uint64_t);
 };
 
 void        pl_cache_init(void);
@@ -65,6 +68,11 @@ int                 pl_cache_newPlaylistFromDir(char*a_pcDir);
 int                 pl_cache_getTrackWithPath(char*a_pcData, int a_iIndex);
 int                 pl_cache_getTrackDetails(pl_core_MediaFileStruct*a_psData, int a_iIndex);
 int                 pl_cache_setRepeatRandom(struct sPlaybackOptions a_sPlOpts);
+int                 pl_cache_setPlIndex(uint64_t a_u64Index);
+int                 pl_cache_getNextTrackPath(char*a_pcPath);
+int                 pl_cache_getPrevTrackPath(char*a_pcPath);
+int                 pl_cache_getCurrTrackDetails(pl_core_MediaFileStruct*a_psData);
+void                pl_cache_getPlaylistItems(pl_core_MediaFileStruct* a_pItemsArray, uint64_t a_u64ArraySize);
 
 #endif // MULTIMEDIACACHE_H
 

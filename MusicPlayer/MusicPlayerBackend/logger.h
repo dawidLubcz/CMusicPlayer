@@ -12,6 +12,7 @@
 #define PRINT_ERR(DESC, ...) PRINT_EX("[ERR]: " PRINT_PREFIX DESC "\n", ##__VA_ARGS__)
 #define PRINT_WRN(DESC, ...) PRINT_EX("[WRN]: " PRINT_PREFIX DESC "\n", ##__VA_ARGS__)
 #define PRINT_OUT(DESC, ...) printf("[OUT]: " DESC "\n", ##__VA_ARGS__)
+#define PRINT_ENTRY printf("[INF]: " PRINT_PREFIX ", %s\n", __func__)
 
 static inline void PRINT_EX(const char a_acArg[], ...)
 {

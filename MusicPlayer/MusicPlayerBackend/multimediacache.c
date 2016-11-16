@@ -7,8 +7,11 @@
 #undef PRINT_PREFIX
 #define PRINT_PREFIX "MP:CacheBase: "
 
-#define CACHE_ASSERT assert(g_fInitialized); \
-    PRINT_ERR("%s failed, not initialized!", __func__);
+#define CACHE_ASSERT assert(g_fInitialized != 0); \
+    if(g_fInitialized == 0) \
+    { \
+        PRINT_ERR("%s failed, not initialized: %d", __func__, g_fInitialized);\
+    }\
 
 static eSourceID g_eActiveSource = E_ID_FILESYS;
 static struct sSourceInterface g_aSourcesArray[E_ID_MAX] = {0};
@@ -89,4 +92,38 @@ int pl_cache_setRepeatRandom(struct sPlaybackOptions a_sPlOpts)
     CACHE_ASSERT;
     int iRetCode = g_aSourcesArray[g_eActiveSource].m_pfSetRepeatRandom(a_sPlOpts);
     return iRetCode;
+}
+
+int pl_cache_setPlIndex(uint64_t a_u64Index)
+{
+    CACHE_ASSERT;
+    int iRetCode = g_aSourcesArray[g_eActiveSource].m_pfSetPlIndex(a_u64Index);
+    return iRetCode;
+}
+
+int pl_cache_getNextTrackPath(char * a_pcPath)
+{
+    CACHE_ASSERT;
+    int iRetCode = g_aSourcesArray[g_eActiveSource].m_pfGetNextTrackPath(a_pcPath);
+    return iRetCode;
+}
+
+int pl_cache_getPrevTrackPath(char * a_pcPath)
+{
+    CACHE_ASSERT;
+    int iRetCode = g_aSourcesArray[g_eActiveSource].m_pfGetPrevTrackPath(a_pcPath);
+    return iRetCode;
+}
+
+int pl_cache_getCurrTrackDetails(pl_core_MediaFileStruct *a_psData)
+{
+    CACHE_ASSERT;
+    int iRetCode = g_aSourcesArray[g_eActiveSource].m_pfGetCurrTrackDetails(a_psData);
+    return iRetCode;
+}
+
+void pl_cache_getPlaylistItems(pl_core_MediaFileStruct *a_pItemsArray, uint64_t a_u64ArraySize)
+{
+    CACHE_ASSERT;
+    g_aSourcesArray[g_eActiveSource].m_pfGetPlaylistItems(a_pItemsArray, a_u64ArraySize);
 }
