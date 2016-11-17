@@ -227,6 +227,8 @@ void gst_pl_selectTrack(char *a_pTrackName)
             break;
         }
 
+        PRINT_INF("gst_pl_selectTrack(): %s\n", a_pTrackName);
+
         if(FALSE != g_eTrackWasSet)
         {
             gst_pl_unload();

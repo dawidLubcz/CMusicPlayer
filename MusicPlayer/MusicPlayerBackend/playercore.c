@@ -767,13 +767,13 @@ void handleSetTrackWithIndex(uDataParams_t a_sParams)
 {
     struct sPlaylist sPl = pl_cache_getPlaylistCurrSource();
 
-    PRINT_INF("handleSetTrackWithIndex(), index: %lu, pl_size: %u",a_sParams.i32Param, sPl.m_u64CurrentPlaylistSize);
+    PRINT_INF("handleSetTrackWithIndex(), index: %lu, pl_size: %u",a_sParams.u64Param, sPl.m_u64CurrentPlaylistSize);
 
     char pcFullTrackName[PL_CORE_FILE_NAME_SIZE];
     memset(pcFullTrackName, '\0', PL_CORE_FILE_NAME_SIZE);
     pl_cache_getTrackWithPath(pcFullTrackName, a_sParams.u64Param);
 
-    if(strlen(pcFullTrackName) > 2)
+    if(strlen(pcFullTrackName) > 1)
     {
         gst_pl_selectTrack(pcFullTrackName);
         pl_cache_setPlIndex(a_sParams.u64Param);
