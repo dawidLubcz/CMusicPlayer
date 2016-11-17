@@ -80,7 +80,6 @@ static GAsyncQueue*    g_psAsyncInterfaceQueue  = 0;
 static GList*          g_psListenersList        = 0;
 static pthread_mutex_t g_sPlayerQueueMutex = PTHREAD_MUTEX_INITIALIZER;
 
-//static sPlaylist        g_oCurrentPlaylist = {0};
 static sPlaybackOptions g_oPlaybackOptions = {E_REPEAT_ALL};
 static sSources         g_oSupportedSources = {0};
 
