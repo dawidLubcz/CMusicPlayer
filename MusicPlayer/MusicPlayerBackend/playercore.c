@@ -456,16 +456,6 @@ void handlePlay(uDataParams_t a_sParams)
     pl_core_MediaFileStruct sData;
     pl_cache_getCurrTrackDetails(&sData);
     notifyListenersTrackInfoReady(sData.m_sTrackInfo);
-
-    /*if(0 < g_u8Initialized && 0 != g_oCurrentPlaylist.m_psCurrentTrackListGArray && 0 < g_oCurrentPlaylist.m_psCurrentTrackListGArray->len)
-    {
-        pl_core_MediaFileStruct sData = g_array_index(g_oCurrentPlaylist.m_psCurrentTrackListGArray, pl_core_MediaFileStruct, g_oCurrentPlaylist.m_u64CurrentPlaylistIndex);
-        notifyListenersTrackInfoReady(sData.m_sTrackInfo);
-    }
-    else
-    {
-        PRINT_INF("handlePlay(), empty playlist, not initialized");
-    }*/
 }
 
 void handleStop(uDataParams_t a_sParams)
@@ -497,23 +487,6 @@ void handleNext(uDataParams_t a_sParams)
     {
         PRINT_ERR("handleNext(), failed");
     }
-
-    /*if(0 != g_oCurrentPlaylist.m_psCurrentTrackListGArray && (g_oCurrentPlaylist.m_u64CurrentPlaylistIndex + 1) < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
-    {
-        pl_core_MediaFileStruct sData = g_array_index(g_oCurrentPlaylist.m_psCurrentTrackListGArray, pl_core_MediaFileStruct, ++g_oCurrentPlaylist.m_u64CurrentPlaylistIndex);
-        gst_pl_selectTrack(sData.m_pcFullName);
-        handlePlay(a_sParams);
-    }
-    else if (0 != g_oCurrentPlaylist.m_psCurrentTrackListGArray && (g_oCurrentPlaylist.m_u64CurrentPlaylistIndex + 1) >= g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
-    {
-        pl_core_MediaFileStruct sData = g_array_index(g_oCurrentPlaylist.m_psCurrentTrackListGArray, pl_core_MediaFileStruct, 0);
-        gst_pl_selectTrack(sData.m_pcFullName);
-        handlePlay(a_sParams);
-    }
-    else
-    {
-        PRINT_INF("handleNext(), no playlist available!");
-    }*/
 }
 
 void handlePrev(uDataParams_t a_sParams)
@@ -533,24 +506,6 @@ void handlePrev(uDataParams_t a_sParams)
     {
         PRINT_ERR("handlePrev(), failed");
     }
-
-    /*if(0 != g_oCurrentPlaylist.m_psCurrentTrackListGArray && g_oCurrentPlaylist.m_u64CurrentPlaylistIndex < g_oCurrentPlaylist.m_u64CurrentPlaylistSize && (g_oCurrentPlaylist.m_u64CurrentPlaylistIndex -1) < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
-    {
-        pl_core_MediaFileStruct sData = g_array_index(g_oCurrentPlaylist.m_psCurrentTrackListGArray, pl_core_MediaFileStruct, --g_oCurrentPlaylist.m_u64CurrentPlaylistIndex);
-        gst_pl_selectTrack(sData.m_pcFullName);
-        handlePlay(a_sParams);
-    }
-    else if (0 != g_oCurrentPlaylist.m_psCurrentTrackListGArray && g_oCurrentPlaylist.m_u64CurrentPlaylistIndex < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
-    {
-        pl_core_MediaFileStruct sData = g_array_index(g_oCurrentPlaylist.m_psCurrentTrackListGArray, pl_core_MediaFileStruct, g_oCurrentPlaylist.m_u64CurrentPlaylistSize - 1);
-        g_oCurrentPlaylist.m_u64CurrentPlaylistIndex = g_oCurrentPlaylist.m_u64CurrentPlaylistSize - 1;
-        gst_pl_selectTrack(sData.m_pcFullName);
-        handlePlay(a_sParams);
-    }
-    else
-    {
-        PRINT_INF("handleNext(), no playlist available!");
-    }*/
 }
 
 void handleSetTrack(uDataParams_t a_sParams)
@@ -698,12 +653,6 @@ void handlePlayListCreate(uDataParams_t a_sParams)
 
     int cntr = pl_cache_newPlaylistFromDir(".");
     notifyListenersListReady(cntr);
-    /*
-    clearCurrentPlaylist();
-
-    g_oCurrentPlaylist.m_psCurrentTrackListGArray = g_array_new(FALSE, FALSE, sizeof(pl_core_MediaFileStruct));
-    g_oCurrentPlaylist.m_u64CurrentPlaylistSize = pl_br_getFilesInCurrentDir_G(g_oCurrentPlaylist.m_psCurrentTrackListGArray, E_EXT_ALL);
-    */
 }
 
 void handleMp3PlaylistCreate(uDataParams_t a_sParams)
@@ -712,12 +661,6 @@ void handleMp3PlaylistCreate(uDataParams_t a_sParams)
 
     int cntr = pl_cache_newPlaylistFromDir(".");
     notifyListenersListReady(cntr);
-
-    /*clearCurrentPlaylist();
-
-    g_oCurrentPlaylist.m_psCurrentTrackListGArray = g_array_new(FALSE, FALSE, sizeof(pl_core_MediaFileStruct));
-    g_oCurrentPlaylist.m_u64CurrentPlaylistSize = pl_br_getFilesInCurrentDir_G(g_oCurrentPlaylist.m_psCurrentTrackListGArray, E_EXT_MP3);
-    notifyListenersListReady(g_oCurrentPlaylist.m_u64CurrentPlaylistSize);*/
 }
 
 static void handlePlaylistFromDir(uDataParams_t a_sParams)
@@ -726,11 +669,6 @@ static void handlePlaylistFromDir(uDataParams_t a_sParams)
     {
         int cntr = pl_cache_newPlaylistFromDir(a_sParams.paBuffer);
         notifyListenersListReady(cntr);
-        /*
-        clearCurrentPlaylist();
-
-        g_oCurrentPlaylist.m_psCurrentTrackListGArray = g_array_new(FALSE, FALSE, sizeof(pl_core_MediaFileStruct));
-        uint64_t u64Count = pl_br_getFilesInDir_G(g_oCurrentPlaylist.m_psCurrentTrackListGArray, E_EXT_ALL, a_sParams.paBuffer);*/
 
         PRINT_INF("handlePlaylistFromDir(), size: %s, %d", a_sParams.paBuffer, cntr);
     }
@@ -747,11 +685,6 @@ static void handlePlaylistFromDir_r(uDataParams_t a_sParams)
     {
         int cntr = pl_cache_newPlaylistFromDirRec(a_sParams.paBuffer);
         notifyListenersListReady(cntr);
-        /*
-        clearCurrentPlaylist();
-
-        g_oCurrentPlaylist.m_psCurrentTrackListGArray = g_array_new(FALSE, FALSE, sizeof(pl_core_MediaFileStruct));
-        g_oCurrentPlaylist.m_u64CurrentPlaylistSize = pl_br_getFilesInDir_G_R(g_oCurrentPlaylist.m_psCurrentTrackListGArray, E_EXT_ALL, a_sParams.paBuffer);*/
 
         PRINT_INF("handlePlaylistFromDir(), size: %s, %u", a_sParams.paBuffer, cntr);
     }
@@ -777,22 +710,6 @@ void handleSetTrackWithIndex(uDataParams_t a_sParams)
         gst_pl_selectTrack(pcFullTrackName);
         pl_cache_setPlIndex(a_sParams.u64Param);
     }
-
-    /*if(0 != g_oCurrentPlaylist.m_psCurrentTrackListGArray && a_sParams.u64Param < g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
-    {
-        pl_core_MediaFileStruct sData = g_array_index(g_oCurrentPlaylist.m_psCurrentTrackListGArray, pl_core_MediaFileStruct, a_sParams.u64Param);
-        gst_pl_selectTrack(sData.m_pcFullName);
-        g_oCurrentPlaylist.m_u64CurrentPlaylistIndex = a_sParams.u64Param;
-    }
-    else if (0 != g_oCurrentPlaylist.m_psCurrentTrackListGArray && a_sParams.u64Param >= g_oCurrentPlaylist.m_u64CurrentPlaylistSize)
-    {
-        pl_core_MediaFileStruct sData = g_array_index(g_oCurrentPlaylist.m_psCurrentTrackListGArray, pl_core_MediaFileStruct, 0);
-        gst_pl_selectTrack(sData.m_pcFullName);
-    }
-    else
-    {
-        PRINT_INF("handleSetTrackWithIndex(), no playlist available!");
-    }*/
 }
 
 void handleSetTimePos(uDataParams_t a_sParams)
@@ -953,12 +870,6 @@ void pl_core_getPlaylistItems(pl_core_MediaFileStruct *a_pItemsArray, uint64_t a
     if(0 != a_pItemsArray)
     {
         pl_cache_getPlaylistItems(a_pItemsArray, a_u64MaxSize);
-
-        /*
-        for(unsigned int i = 0; (i<g_oCurrentPlaylist.m_u64CurrentPlaylistSize)&&(i<a_u64MaxSize); ++i)
-        {
-            a_pItemsArray[i] = g_array_index(g_oCurrentPlaylist.m_psCurrentTrackListGArray, pl_core_MediaFileStruct, i);
-        }*/
     }
     else
     {
