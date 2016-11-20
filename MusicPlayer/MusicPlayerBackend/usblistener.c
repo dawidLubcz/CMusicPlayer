@@ -19,12 +19,7 @@
 #define ACTION_ADD "add"
 
 static usb_callbacsInterface g_oInterface = {0};
-static eBool g_eInterfaceWasSet = eFALSE;
 
-static const char* g_cpcUdeviceName = "udev";
-static const char* g_cpcPartitionName = "partition";
-static const char* g_cpcActionRem = "remove";
-static const char* g_cpcActionAdd = "add";
 static unsigned short int g_iInitialized = 0;
 static struct udev* g_pUdevice = 0;
 static struct udev_monitor* g_pUdeviceMonitor = 0;
@@ -36,26 +31,27 @@ void usb_setCallbacs(usb_callbacsInterface a_sInterface)
     if(a_sInterface.m_pfPartitionConnected != 0 && a_sInterface.m_pfPartitionDisconnected != 0)
     {
         g_oInterface = a_sInterface;
-        g_eInterfaceWasSet = eTRUE;
         PRINT_INF("usb_setCallbacs(), OK");
     }
     else
     {
-        g_eInterfaceWasSet = eFALSE;
         PRINT_INF("usb_setCallbacs(), FAILED");
     }
 }
 
-int usb_listenerInit()
+int usb_listenerInit(usb_callbacsInterface a_sInterface)
 {
+    static const char* pcUdeviceName = "udev";
     g_pUdevice = udev_new();
+    usb_setCallbacs(a_sInterface);
+
     if(!g_pUdevice)
     {
         PRINT_INF("usbListenerInit(), udev create failed");
         return NOK;
     }
 
-    g_pUdeviceMonitor = udev_monitor_new_from_netlink(g_pUdevice, g_cpcUdeviceName);
+    g_pUdeviceMonitor = udev_monitor_new_from_netlink(g_pUdevice, pcUdeviceName);
     if(!g_pUdeviceMonitor)
     {
         PRINT_INF("usbListenerInit(), dev monitor connect failed\n");
@@ -105,18 +101,23 @@ void usb_listenerRun()
                 const char* pcDevType = udev_device_get_devtype(pDevice);
                 const char* pcDevAction = udev_device_get_action(pDevice);
 
-                if(g_eInterfaceWasSet)
+                if(0 != g_oInterface.m_pfPartitionConnected &&
+                   0 != g_oInterface.m_pfPartitionDisconnected)
                 {
+                    const char* pcPartitionName = "partition";
+                    const char* pcActionRem     = "remove";
+                    const char* pcActionAdd     = "add";
+
                     if(0 != pcDevNode && 0 != pcDevAction && 0 != pcDevType &&
                        0 < strlen(pcDevNode) && 0 < strlen(pcDevAction) && 0 < strlen(pcDevType))
                     {
-                        if(NULL != strstr(pcDevType, g_cpcPartitionName))
+                        if(NULL != strstr(pcDevType, pcPartitionName))
                         {
-                            if(0 != pcDevAction && NULL != strstr(pcDevAction, g_cpcActionAdd))
+                            if(0 != pcDevAction && NULL != strstr(pcDevAction, pcActionAdd))
                             {
                                 g_oInterface.m_pfPartitionConnected(pcDevNode);
                             }
-                            else if(0 != pcDevAction && NULL != strstr(pcDevAction, g_cpcActionRem))
+                            else if(0 != pcDevAction && NULL != strstr(pcDevAction, pcActionRem))
                             {
                                 g_oInterface.m_pfPartitionDisconnected(pcDevNode);
                             }

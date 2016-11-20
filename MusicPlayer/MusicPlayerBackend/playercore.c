@@ -26,50 +26,12 @@
 
 typedef void (*handlerPointer)(uDataParams_t);
 
-typedef struct _sPlaylist
-{
-    GArray*  m_psCurrentTrackListGArray;
-    uint64_t m_u64CurrentPlaylistSize;
-    uint64_t m_u64CurrentPlaylistIndex;
-}sPlaylist;
-
 typedef struct _sPlaybackOptions
 {
     eRepeat m_eRepeat;
     eBool   m_eShuffle;
 }sPlaybackOptions;
 
-typedef struct _sSourceInfo
-{
-    eBool m_eIsAvailable;
-    eBool m_eIsActive;
-    eSourceID m_eSourceID;
-    sPlaylist m_oPlaylist;
-    sPlaybackOptions m_oPlayBackOpt;
-}sSourceInfo;
-
-typedef struct _sFileSystem
-{
-    sSourceInfo m_oSourceInfo;
-    char m_pcStartFolder[PL_CORE_FILE_NAME_SIZE];
-    char m_pcLastFolder[PL_CORE_FILE_NAME_SIZE];
-}sFileSystem;
-
-typedef struct _sUSBSource
-{
-    pthread_t   m_oUSBListenerThread;
-    sSourceInfo m_oSourceInfo;
-    eBool       m_eWasMounted;
-}sUSBSource;
-
-typedef struct _sSources
-{
-    sUSBSource  m_sUSB;
-    sFileSystem m_sFileSys;
-}sSources;
-
-static const char*     g_pcMsqQueueFile    = "msgQueueFile";
-static char            g_cProjectID        = 'D' | 'L';
 static int32_t         g_i32MsgQueueID     = 0;
 static u_int8_t        g_u8IsIPCRunning    = FALSE;
 static u_int8_t        g_u8IsQueueRunning  = FALSE;
@@ -79,9 +41,9 @@ static pthread_t       g_oThreadQueue      = 0;
 static GAsyncQueue*    g_psAsyncInterfaceQueue  = 0;
 static GList*          g_psListenersList        = 0;
 static pthread_mutex_t g_sPlayerQueueMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_t       g_oUSBListenerThread = 0;
 
 static sPlaybackOptions g_oPlaybackOptions = {E_REPEAT_ALL};
-static sSources         g_oSupportedSources = {0};
 
 /// private functions
 static eErrCode appCoreInitQueue();
@@ -169,15 +131,10 @@ void initializeGstObserver()
 
 void initializeUSBSource()
 {
-    sUSBSource sUSB;
-    g_oSupportedSources.m_sUSB = sUSB;
-
-    usb_listenerInit();
-
     usb_callbacsInterface sInterface = {0};
     sInterface.m_pfPartitionConnected = handleUSBConnected;
     sInterface.m_pfPartitionDisconnected = handleUSBDisconnected;
-    usb_setCallbacs(sInterface);
+    usb_listenerInit(sInterface);
 }
 
 eErrCode pl_core_initialize()
@@ -311,7 +268,7 @@ void pl_core_runUSBListener()
 
     if(FALSE != g_u8Initialized)
     {
-        int iRetVal = pthread_create(&g_oSupportedSources.m_sUSB.m_oUSBListenerThread,
+        int iRetVal = pthread_create(&g_oUSBListenerThread,
                                      0,
                                      threadUSB,
                                      0
@@ -334,8 +291,10 @@ eErrCode appCoreInitQueue()
 {
     key_t u32MsgQueueKey = -1;
     eErrCode i32Result = ERR_NOK;
+    const char* pcMsqQueueFile = "msgQueueFile";
+    char cProjectID = 'D' | 'L';
 
-    u32MsgQueueKey = ftok(g_pcMsqQueueFile, g_cProjectID);
+    u32MsgQueueKey = ftok(pcMsqQueueFile, cProjectID);
     if(-1 < u32MsgQueueKey)
     {
         if(-1 == (g_i32MsgQueueID = msgget(u32MsgQueueKey, 0644 | IPC_CREAT)))

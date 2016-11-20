@@ -11,10 +11,9 @@ typedef struct
     usb_partitionDisconnected m_pfPartitionDisconnected;
 }usb_callbacsInterface;
 
-int  usb_listenerInit();
+int  usb_listenerInit(usb_callbacsInterface a_sInterface);
 void usb_listenerRun();
 void usb_listenerStop();
-void usb_setCallbacs(usb_callbacsInterface a_sInterface);
 eBool usb_mount(const char* a_pcDevNode, const char* a_pcDirectory);
 void usb_umount(char* a_pcDir);
 
