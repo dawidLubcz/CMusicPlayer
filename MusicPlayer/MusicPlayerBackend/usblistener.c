@@ -7,6 +7,8 @@
 #include <string.h>
 
 #include <sys/mount.h>
+#include <errno.h>
+#include <mntent.h>
 
 #define NOK -1
 #define OK 0
@@ -125,13 +127,13 @@ void usb_listenerRun()
                     }
                 }
 
-                PRINT_INF("+---------------+");
+                /*PRINT_INF("+---------------+");
                 PRINT_INF("Got Device");
                 PRINT_INF("Node: %s", pcDevNode);
                 PRINT_INF("Subsystem: %s", udev_device_get_subsystem(pDevice));
                 PRINT_INF("Devtype: %s", pcDevType);
                 PRINT_INF("Action: %s", pcDevAction);
-                PRINT_INF("+---------------+\n");
+                PRINT_INF("+---------------+\n");*/
                 udev_device_unref(pDevice);
             }
             else
@@ -142,6 +144,37 @@ void usb_listenerRun()
         usleep(250*1000);
         fflush(stdout);
     }
+}
+
+eBool usb_get_mountpoint(const char* a_pcDevNode, const char* a_pcDirectory, int a_maxSize)
+{
+    eBool eResult = eFALSE;
+
+    PRINT_INF("uusb_get_mountpoint(), node: %s", a_pcDevNode);
+
+    struct mntent *ent;
+    FILE *aFile;
+
+    aFile = setmntent("/proc/mounts", "r");
+    if (aFile == NULL) 
+    {
+        perror("setmntent");
+    }
+    else
+    {
+        while (NULL != (ent = getmntent(aFile))) 
+        {
+            if(strstr(ent->mnt_fsname, a_pcDevNode))
+            {
+                strncpy(a_pcDirectory, ent->mnt_dir, a_maxSize);
+            }
+        }
+        endmntent(aFile);
+        eResult = eTRUE;
+    }
+    PRINT_INF("uusb_get_mountpoint(), node: %s, dir: %s", a_pcDevNode, a_pcDirectory);
+
+    return eResult;
 }
 
 eBool usb_mount(const char* a_pcDevNode, const char* a_pcDirectory)
@@ -157,7 +190,7 @@ eBool usb_mount(const char* a_pcDevNode, const char* a_pcDirectory)
         iRetCode = mount(a_pcDevNode, a_pcDirectory, "vfat", MS_SYNCHRONOUS, NULL);
         if(-1 == iRetCode)
         {
-            PRINT_ERR("Mount failed, cntr: %d, ret: %d", iCntr, iRetCode);
+            PRINT_ERR("Mount failed, cntr: %d, ret: %d, errno: %d, %s", iCntr, iRetCode,errno, strerror(errno));
 
             iRetCode = mount(a_pcDevNode, a_pcDirectory, "vfat", MS_MOVE, NULL);
             PRINT_ERR("Mount, moving ret: %d", iRetCode);

@@ -38,7 +38,7 @@ static u_int8_t        g_u8IsQueueRunning  = FALSE;
 static u_int8_t        g_u8Initialized     = FALSE;
 static pthread_t       g_oThreadIPC        = 0;
 static pthread_t       g_oThreadQueue      = 0;
-static GAsyncQueue*    g_psAsyncInterfaceQueue  = 0;
+static GQueue*         g_psInterfaceQueue  = 0;
 static GList*          g_psListenersList        = 0;
 static pthread_mutex_t g_sPlayerQueueMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_t       g_oUSBListenerThread = 0;
@@ -145,7 +145,7 @@ eErrCode pl_core_initialize()
     initializeGstObserver();
     initializeUSBSource();
 
-    g_psAsyncInterfaceQueue = g_async_queue_new ();
+    g_psInterfaceQueue = g_queue_new ();
 
     if(ERR_OK == eResult) g_u8Initialized = TRUE;
 
@@ -164,10 +164,10 @@ eErrCode pl_core_deinitialize()
 
     pl_core_cleanMemory();
 
-    if(0 != g_psAsyncInterfaceQueue)
+    if(0 != g_psInterfaceQueue)
     {
-        g_async_queue_unref (g_psAsyncInterfaceQueue);
-        g_psAsyncInterfaceQueue = 0;
+        g_queue_free(g_psInterfaceQueue);
+        g_psInterfaceQueue = 0;
     }
 
     if(0 != g_psListenersList)
@@ -328,23 +328,27 @@ void *threadQueue(void *arg)
             PRINT_ERR("threadQueue() Not initialized!");
             break;
         }
+        //sData_t sMsg = *((sData_t*)g_queue_pop_head(g_psInterfaceQueue)); // blocking
+        void* data = g_queue_pop_head(g_psInterfaceQueue);
 
-        PRINT_INF("threadQueue(), wait...");
-        sData_t sMsg = *((sData_t*)g_async_queue_pop(g_psAsyncInterfaceQueue)); // blocking
+        if(data)
+        {
+            sData_t sMsg = *((sData_t*)data);
+            PRINT_INF("threadQueue(), MSG: %d", sMsg.eCommand);
 
-        if(E_MAX > sMsg.eCommand)
-        {
-            g_apAPIHandlersArray[sMsg.eCommand](sMsg.uParam);
-            PRINT_INF("threadQueue(), got msg: %d", sMsg.eCommand);
-        }
-        else
-        {
-            PRINT_ERR("threadQueue(), INVALID INDEX: %d", sMsg.eCommand);
-        }
+            if(E_MAX > sMsg.eCommand)
+            {
+                g_apAPIHandlersArray[sMsg.eCommand](sMsg.uParam);
+            }
+            else
+            {
+                PRINT_ERR("threadQueue(), INVALID INDEX: %d", sMsg.eCommand);
+            }
 
-        if(QUEUE_EXIT == sMsg.uParam.i32Param)
-        {
-            break;
+            if(QUEUE_EXIT == sMsg.uParam.i32Param)
+            {
+                break;
+            }
         }
     }
     g_u8IsQueueRunning = FALSE;
@@ -523,26 +527,38 @@ static void handleUSBConnected(const char* a_psNewPartition)
 
     char* pcMountDir = "USB";
     memset(g_pcUsbMountDir, '\0', PL_CORE_FILE_NAME_SIZE);
-    getcwd(g_pcUsbMountDir, PL_CORE_FILE_NAME_SIZE);
-    strcat(g_pcUsbMountDir, "/");
-    strcat(g_pcUsbMountDir,pcMountDir);
 
-    if(usb_mount(a_psNewPartition, g_pcUsbMountDir))
+    usb_get_mountpoint(a_psNewPartition, g_pcUsbMountDir, PL_CORE_FILE_NAME_SIZE);
+
+    if(strlen(g_pcUsbMountDir) == 0)
     {
-        memset(g_pcCurrentPartition, '\0', 128);
-        strcpy(g_pcCurrentPartition, a_psNewPartition);
+        getcwd(g_pcUsbMountDir, PL_CORE_FILE_NAME_SIZE);
+        strcat(g_pcUsbMountDir, "/");
+        strcat(g_pcUsbMountDir,pcMountDir);
 
+        if(usb_mount(a_psNewPartition, g_pcUsbMountDir))
+        {
+            memset(g_pcCurrentPartition, '\0', 128);
+            strcpy(g_pcCurrentPartition, a_psNewPartition);
+            g_iUsbMounted = TRUE;
+        }
+        else
+        {
+            PRINT_ERR("handleUSBConnected(), USB mount failed");
+        }
+    }
+    else
+    {
+        g_iUsbMounted = TRUE;
+    }
+
+    if (g_iUsbMounted)
+    {
         pl_core_stop();
         pl_cache_setActiveSource(E_ID_USB);
         pl_core_createPlaylistFromDir_r(g_pcUsbMountDir);
         pl_core_setTrackWithIndex(0);
         pl_core_play();
-
-        g_iUsbMounted = TRUE;
-    }
-    else
-    {
-        PRINT_ERR("handleUSBConnected(), USB mount failed");
     }
 }
 
@@ -681,7 +697,7 @@ void handleSetTimePos(uDataParams_t a_sParams)
 void pushSave(sData_t a_sMsg)
 {
     pthread_mutex_lock(&g_sPlayerQueueMutex);
-    g_async_queue_push(g_psAsyncInterfaceQueue, (void*)(&a_sMsg));
+    g_queue_push_tail(g_psInterfaceQueue, (void*)(&a_sMsg));
     pthread_mutex_unlock(&g_sPlayerQueueMutex);
 }
 
