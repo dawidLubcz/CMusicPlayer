@@ -128,7 +128,7 @@ void usb_listenerRun()
                 }
 
                 /*PRINT_INF("+---------------+");
-                PRINT_INF("Got Device");
+                PRINT_INF("Device");
                 PRINT_INF("Node: %s", pcDevNode);
                 PRINT_INF("Subsystem: %s", udev_device_get_subsystem(pDevice));
                 PRINT_INF("Devtype: %s", pcDevType);
@@ -138,7 +138,7 @@ void usb_listenerRun()
             }
             else
             {
-                printf("No Device from receive_device(). An error occured.\n");
+                PRINT_ERR("No Device from receive_device(). An error occured.\n");
             }
         }
         usleep(250*1000);

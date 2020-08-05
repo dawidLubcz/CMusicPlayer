@@ -4,7 +4,7 @@
 #include "usblistener.h"
 #include "playercore.h"
 
-void filesListHandler(uint64_t a_u64Size)
+void filesListHandler(uint32_t a_u32Size)
 {
     const uint8_t u8Size = 100;
     pl_core_MediaFileStruct itemsArray[u8Size];
@@ -13,9 +13,9 @@ void filesListHandler(uint64_t a_u64Size)
     pl_core_getPlaylistItems(itemsArray, u8Size);
 
     unsigned int size = 0;
-    if(a_u64Size < u8Size)
+    if(a_u32Size < u8Size)
     {
-        size = a_u64Size;
+        size = a_u32Size;
     }
     else
     {
@@ -44,6 +44,8 @@ int main()
     oListener.pfListReady = filesListHandler;
     oListener.pfTrackInfoReady = trackInfoHandler;
     pl_core_registerListener(&oListener);
+
+    pl_core_restore_last_playback();
 
     int iOption = 0;
     do

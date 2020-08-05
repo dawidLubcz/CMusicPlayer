@@ -23,7 +23,9 @@ SOURCES       = ../main.c \
 		../sldplayer.c \
 		../multimediacache.c \
 		../multimediacacheusb.c \
-		../multimediacachefilesys.c 
+		../multimediacachefilesys.c \
+		../platform.c \
+
 OBJECTS       = ../main.o \
 		../mediafilesbrowser.o \
 		../usblistener.o \
@@ -32,7 +34,8 @@ OBJECTS       = ../main.o \
 		../sldplayer.o \
 		../multimediacache.o \
 		../multimediacacheusb.o \
-		../multimediacachefilesys.o
+		../multimediacachefilesys.o \
+		../platform.o \
 
 DESTDIR       = 
 TARGET        = MusicPlayerBackend

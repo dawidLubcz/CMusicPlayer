@@ -5,6 +5,7 @@
 #include "usblistener.h"
 #include "gstplayer.h"
 #include "multimediacache.h"
+#include "platform.h"
 
 #include <sys/types.h>
 #include <sys/ipc.h>
@@ -26,12 +27,6 @@
 
 typedef void (*handlerPointer)(uDataParams_t);
 
-typedef struct _sPlaybackOptions
-{
-    eRepeat m_eRepeat;
-    eBool   m_eShuffle;
-}sPlaybackOptions;
-
 static int32_t         g_i32MsgQueueID     = 0;
 static u_int8_t        g_u8IsIPCRunning    = FALSE;
 static u_int8_t        g_u8IsQueueRunning  = FALSE;
@@ -49,13 +44,14 @@ static sPlaybackOptions g_oPlaybackOptions = {E_REPEAT_ALL};
 static eErrCode appCoreInitQueue();
 static void* threadIPC(void *arg);
 static void* threadQueue(void *arg);
-static void notifyListenersListReady(uint64_t a_u64Count);
+static void notifyListenersListReady(uint32_t a_u32Count);
 static void notifyListenersTrackInfoReady(pl_core_ID3v1 a_sTrackInfo);
 static void pushToQueue(E_PLAYER_COMMAND_t a_eCommand);
 static void pushToQueueString(E_PLAYER_COMMAND_t a_eCommand, char* a_psStr);
-static void pushToQueueU64(E_PLAYER_COMMAND_t a_eCommand, uint64_t a_u64Param);
+static void pushToQueueU32(E_PLAYER_COMMAND_t a_eCommand, uint32_t a_u32Param);
 static void pushToQueueI32(E_PLAYER_COMMAND_t a_eCommand, int32_t a_i32Param);
 static void pushSave(sData_t a_sMsg);
+static eBool popAndStore(sData_t* a_psData);
 
 static void pl_core_runPlayerQueue();
 static void pl_core_runUSBListener();
@@ -92,7 +88,7 @@ handlerPointer g_apAPIHandlersArray[E_MAX] =
     handlePause,    // PAUSE
     handleNext,     // NEXT
     handlePrev,     // PREV
-    handleSetTimePos, // TIME POS
+    handleSetTimePos, // E_SET_TIME
     handleSetTrack, // SET TRACK
     handleUnload,   // UNLOAD
     handleVolUp,    // Volume +
@@ -154,6 +150,21 @@ eErrCode pl_core_initialize()
     pl_cache_init();
 
     return eResult;
+}
+
+eErrCode pl_core_restore_last_playback()
+{
+    sLastPlayedInfo lastPlayedInfo = {0};
+    getLastPlayedInfoFromDisc(&lastPlayedInfo);
+    if(strlen(lastPlayedInfo.playbackPath) > 0)
+    {
+        pl_core_stop();
+        pl_cache_setActiveSource(E_ID_FILESYS);
+        pl_core_createPlaylistFromDir_r(lastPlayedInfo.playbackPath);
+        pl_core_setTrackWithIndex(lastPlayedInfo.trackNum);
+        pl_core_setTimePos(lastPlayedInfo.trackPos);
+        pl_core_play();
+    }
 }
 
 eErrCode pl_core_deinitialize()
@@ -328,12 +339,10 @@ void *threadQueue(void *arg)
             PRINT_ERR("threadQueue() Not initialized!");
             break;
         }
-        //sData_t sMsg = *((sData_t*)g_queue_pop_head(g_psInterfaceQueue)); // blocking
-        void* data = g_queue_pop_head(g_psInterfaceQueue);
 
-        if(data)
+        sData_t sMsg = {0};
+        if(popAndStore(&sMsg))
         {
-            sData_t sMsg = *((sData_t*)data);
             PRINT_INF("threadQueue(), MSG: %d", sMsg.eCommand);
 
             if(E_MAX > sMsg.eCommand)
@@ -517,46 +526,18 @@ void handleEndOfStream(void)
     }
 }
 
-static char g_pcCurrentPartition[128] = {0};
-static char g_pcUsbMountDir[PL_CORE_FILE_NAME_SIZE] = {0};
-static int  g_iUsbMounted = FALSE;
-
 static void handleUSBConnected(const char* a_psNewPartition)
 {
     PRINT_INF("handleUSBConnected(), partition: %s", a_psNewPartition);
 
-    char* pcMountDir = "USB";
-    memset(g_pcUsbMountDir, '\0', PL_CORE_FILE_NAME_SIZE);
+    char* pcPath = NULL;
+    eBool isMounted = getDevicePath(a_psNewPartition, &pcPath) != NOT_MOUNTED;
 
-    usb_get_mountpoint(a_psNewPartition, g_pcUsbMountDir, PL_CORE_FILE_NAME_SIZE);
-
-    if(strlen(g_pcUsbMountDir) == 0)
-    {
-        getcwd(g_pcUsbMountDir, PL_CORE_FILE_NAME_SIZE);
-        strcat(g_pcUsbMountDir, "/");
-        strcat(g_pcUsbMountDir,pcMountDir);
-
-        if(usb_mount(a_psNewPartition, g_pcUsbMountDir))
-        {
-            memset(g_pcCurrentPartition, '\0', 128);
-            strcpy(g_pcCurrentPartition, a_psNewPartition);
-            g_iUsbMounted = TRUE;
-        }
-        else
-        {
-            PRINT_ERR("handleUSBConnected(), USB mount failed");
-        }
-    }
-    else
-    {
-        g_iUsbMounted = TRUE;
-    }
-
-    if (g_iUsbMounted)
+    if (isMounted)
     {
         pl_core_stop();
         pl_cache_setActiveSource(E_ID_USB);
-        pl_core_createPlaylistFromDir_r(g_pcUsbMountDir);
+        pl_core_createPlaylistFromDir_r(pcPath);
         pl_core_setTrackWithIndex(0);
         pl_core_play();
     }
@@ -564,11 +545,11 @@ static void handleUSBConnected(const char* a_psNewPartition)
 
 static void handleUSBDisconnected(const char* a_psRemovedPartition)
 {
-    if(g_iUsbMounted)
+    if(MOUNTED == getLastDeviceMountedState())
     {
         pl_core_stop();
         pl_core_unload();
-        usb_umount(g_pcUsbMountDir);
+        usb_umount(getLastDeviceMountPoint());
         pl_cache_setActiveSource(E_ID_FILESYS);
 
         PRINT_INF("handleUSBDisconnected(), partition: %s", a_psRemovedPartition);
@@ -579,7 +560,7 @@ static void handleUSBDisconnected(const char* a_psRemovedPartition)
     }
 }
 
-void notifyListenersListReady(uint64_t a_u64Count)
+void notifyListenersListReady(uint32_t a_u32Count)
 {
     GList* pfFirstObserver = g_list_first(g_psListenersList);
     while(0 != pfFirstObserver)
@@ -587,7 +568,7 @@ void notifyListenersListReady(uint64_t a_u64Count)
         pl_core_listenerInterface* pTmp = ((pl_core_listenerInterface*)pfFirstObserver->data);
         if(0 != pTmp && 0 != pTmp->pfListReady)
         {
-            pTmp->pfListReady(a_u64Count);
+            pTmp->pfListReady(a_u32Count);
         }
         pfFirstObserver = pfFirstObserver->next;
     }
@@ -672,40 +653,63 @@ static void handlePlaylistFromDir_r(uDataParams_t a_sParams)
 
 void handleSetTrackWithIndex(uDataParams_t a_sParams)
 {
-    struct sPlaylist sPl = pl_cache_getPlaylistCurrSource();
+    sPlaylist* sPl = pl_cache_getPlaylistCurrSource();
 
-    PRINT_INF("handleSetTrackWithIndex(), index: %lu, pl_size: %u",a_sParams.u64Param, sPl.m_u64CurrentPlaylistSize);
+    PRINT_INF("handleSetTrackWithIndex(), index: %u, pl_size: %u",a_sParams.u32Param, sPl->m_u64CurrentPlaylistSize);
 
     char pcFullTrackName[PL_CORE_FILE_NAME_SIZE];
     memset(pcFullTrackName, '\0', PL_CORE_FILE_NAME_SIZE);
-    pl_cache_getTrackWithPath(pcFullTrackName, a_sParams.u64Param);
+    pl_cache_getTrackWithPath(pcFullTrackName, a_sParams.u32Param);
 
     if(strlen(pcFullTrackName) > 1)
     {
         gst_pl_selectTrack(pcFullTrackName);
-        pl_cache_setPlIndex(a_sParams.u64Param);
+        pl_cache_setPlIndex(a_sParams.u32Param);
     }
 }
 
 void handleSetTimePos(uDataParams_t a_sParams)
 {
     PRINT_INF("handleSetTimePos()");
-    gst_pl_setTimePos(a_sParams.u64Param);
+    gst_pl_setTimePos(a_sParams.u32Param);
 }
 
 // Interface
 void pushSave(sData_t a_sMsg)
 {
+    sData_t* psMsg = malloc(sizeof(sData_t));
+    psMsg->eCommand = a_sMsg.eCommand;
+    psMsg->uParam = a_sMsg.uParam;
     pthread_mutex_lock(&g_sPlayerQueueMutex);
-    g_queue_push_tail(g_psInterfaceQueue, (void*)(&a_sMsg));
+    g_queue_push_head(g_psInterfaceQueue, (void*)psMsg);
     pthread_mutex_unlock(&g_sPlayerQueueMutex);
+    PRINT_INF("push() %p %d", psMsg, (*psMsg).eCommand);
+}
+
+// Interface
+eBool popAndStore(sData_t* a_psData)
+{
+    eBool result = eFALSE;
+    pthread_mutex_lock(&g_sPlayerQueueMutex);
+    sData_t* item = (sData_t*)g_queue_pop_tail(g_psInterfaceQueue);
+    if(item)
+    {
+        a_psData->eCommand = item->eCommand;
+        a_psData->uParam = item->uParam;
+        result = eTRUE;
+        free(item);
+        PRINT_INF("free() %p", item);
+    }
+    pthread_mutex_unlock(&g_sPlayerQueueMutex);
+    if(result)PRINT_INF("pop() %d", a_psData->eCommand);
+    return result;
 }
 
 void pushToQueue(E_PLAYER_COMMAND_t a_eCommand)
 {
     PRINT_INF("pushToQueue(), %d", a_eCommand);
 
-    static sData_t sMsg; // it has to be static because poiter is added to queue in pushSave()
+    sData_t sMsg = {0};
     sMsg.eCommand = a_eCommand;
     sMsg.uParam.i32Param = 0;
     pushSave(sMsg);
@@ -715,19 +719,19 @@ void pushToQueueString(E_PLAYER_COMMAND_t a_eCommand, char* a_psStr)
 {
     PRINT_INF("pushToQueueString(), %d", a_eCommand);
 
-    static sData_t sMsg;
+    sData_t sMsg;
     sMsg.eCommand = a_eCommand;
     strcpy(sMsg.uParam.paBuffer, a_psStr);
     pushSave(sMsg);
 }
 
-void pushToQueueU64(E_PLAYER_COMMAND_t a_eCommand, uint64_t a_u64Param)
+void pushToQueueU32(E_PLAYER_COMMAND_t a_eCommand, uint32_t a_u32Param)
 {
-    PRINT_INF("pushToQueueU64(), %d", a_eCommand);
+    PRINT_INF("pushToQueueU32(), %d, %u", a_eCommand, a_u32Param);
 
-    static sData_t sMsg;
+    sData_t sMsg;
     sMsg.eCommand = a_eCommand;
-    sMsg.uParam.u64Param = a_u64Param;
+    sMsg.uParam.u32Param = a_u32Param;
     pushSave(sMsg);
 }
 
@@ -735,7 +739,7 @@ void pushToQueueI32(E_PLAYER_COMMAND_t a_eCommand, int32_t a_i32Param)
 {
     PRINT_INF("pushToQueueI32(), %d", a_eCommand);
 
-    static sData_t sMsg;
+    sData_t sMsg;
     sMsg.eCommand = a_eCommand;
     sMsg.uParam.i32Param = a_i32Param;
     pushSave(sMsg);
@@ -801,9 +805,9 @@ void pl_core_createMP3PlaylistInCurrDir()
     pushToQueue(E_MP3_PLAYLIST_CREATE);
 }
 
-void pl_core_setTrackWithIndex(uint64_t a_u64Id)
+void pl_core_setTrackWithIndex(uint32_t a_u32Id)
 {
-    pushToQueueU64(E_SET_TRACK_INDEX, a_u64Id);
+    pushToQueueU32(E_SET_TRACK_INDEX, a_u32Id);
 }
 
 void pl_core_createPlaylistFromDir(char *a_pcFolderWithPath)
@@ -840,11 +844,11 @@ void pl_core_deregisterListener(pl_core_listenerInterface* a_psInterface)
     }
 }
 
-void pl_core_getPlaylistItems(pl_core_MediaFileStruct *a_pItemsArray, uint64_t a_u64MaxSize)
+void pl_core_getPlaylistItems(pl_core_MediaFileStruct *a_pItemsArray, uint32_t a_u32MaxSize)
 {
     if(0 != a_pItemsArray)
     {
-        pl_cache_getPlaylistItems(a_pItemsArray, a_u64MaxSize);
+        pl_cache_getPlaylistItems(a_pItemsArray, a_u32MaxSize);
     }
     else
     {
@@ -854,7 +858,7 @@ void pl_core_getPlaylistItems(pl_core_MediaFileStruct *a_pItemsArray, uint64_t a
 
 void pl_core_setTimePos(uint32_t a_u32TimePos)
 {
-    pushToQueueU64(E_SET_TIME, a_u32TimePos);
+    pushToQueueU32(E_SET_TIME, a_u32TimePos);
 }
 
 void pl_core_setRepeat(eRepeat a_eRepeat)

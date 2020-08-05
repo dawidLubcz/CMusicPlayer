@@ -16,5 +16,7 @@ typedef enum
     ERR_NOK = -1
 }eErrCode;
 
+#define PL_CORE_FILE_NAME_SIZE 512 //supported string length
+
 #endif // COMMON
 

@@ -3,14 +3,15 @@
 
 #include "multimediacache.h"
 
-struct sSourceInterface pl_cache_usb_createUsb();
+sSourceInterface pl_cache_usb_createUsb();
 
-struct sPlaylist  pl_cache_usb_GetPlaylist(void);
+sPlaylist*        pl_cache_usb_GetPlaylist(void);
 int               pl_cache_usb_NewPlFromDirRec(char* a_pcDir);
 int               pl_cache_usb_NewPlFromDir(char* a_pcDir);
 int               pl_cache_usb_GetTrackWithPath(char* a_pcData, uint64_t a_iIndex);
 int               pl_cache_usb_GetTrackDetails(pl_core_MediaFileStruct* a_psData, int a_iIndex);
-int               pl_cache_usb_SetRepeatRandom(struct sPlaybackOptions a_sPlaybackOpt);
+int               pl_cache_usb_SetRepeatRandom(sPlaybackOptions a_sPlaybackOpt);
+int               pl_cache_usb_GetRepeatRandom(sPlaybackOptions* a_sPlaybackOpt);
 void              pl_cache_usb_destroy();
 int               pl_cache_usb_SetPlIndex(uint64_t a_iIndex);
 int               pl_cache_usb_GetNextTrackPath(char* a_pcData);

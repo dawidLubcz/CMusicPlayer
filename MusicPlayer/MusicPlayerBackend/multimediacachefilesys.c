@@ -6,19 +6,20 @@
 #undef PRINT_PREFIX
 #define PRINT_PREFIX "MP:cacheSYS: "
 
-static struct sSourceInfo g_sSourceData = {0};
+static sSourceInfo g_sSourceData = {0};
 
-struct sSourceInterface pl_cache_sys_createSYS()
+sSourceInterface pl_cache_sys_createSYS()
 {
     PRINT_ENTRY;
 
-    struct sSourceInterface sInterface = {.m_pfDestroy = pl_cache_sys_destroy,
+    sSourceInterface sInterface = {.m_pfDestroy = pl_cache_sys_destroy,
                                           .m_pfGetPlaylist = pl_cache_sys_GetPlaylist,
                                           .m_pfNewPlaylistFromDirRec = pl_cache_sys_NewPlFromDirRec,
                                           .m_pfNewPlaylistFromDir = pl_cache_sys_NewPlFromDir,
                                           .m_pfGetTrackWithPath = pl_cache_sys_GetTrackWithPath,
                                           .m_pfGetTrackDetails = pl_cache_sys_GetTrackDetails,
                                           .m_pfSetRepeatRandom = pl_cache_sys_SetRepeatRandom,
+                                          .m_pfGetRepeatRandom = pl_cache_sys_GetRepeatRandom,
                                           .m_pfSetPlIndex = pl_cache_sys_SetPlIndex,
                                           .m_pfGetNextTrackPath = pl_cache_sys_GetNextTrackPath,
                                           .m_pfGetPrevTrackPath = pl_cache_sys_GetPrevTrackPath,
@@ -27,11 +28,11 @@ struct sSourceInterface pl_cache_sys_createSYS()
     return sInterface;
 }
 
-struct sPlaylist pl_cache_sys_GetPlaylist()
+sPlaylist* pl_cache_sys_GetPlaylist()
 {
     PRINT_INF("pl_cache_sys_GetPlaylist(), P: 0x%x, size: %u, index: %u", g_sSourceData.m_oPlaylist.m_psCurrentTrackListGArray,
               g_sSourceData.m_oPlaylist.m_u64CurrentPlaylistSize, g_sSourceData.m_oPlaylist.m_u64CurrentPlaylistIndex);
-    return g_sSourceData.m_oPlaylist;
+    return &g_sSourceData.m_oPlaylist;
 }
 
 static eBool clearPlaylist()
@@ -58,7 +59,7 @@ static eBool clearPlaylist()
 
 int pl_cache_sys_NewPlFromDirRec(char *a_pcDir)
 {
-    PRINT_ENTRY;
+    PRINT_ENTRY_EX("[%s]", a_pcDir);
 
     int iResult = 0;
 
@@ -164,11 +165,19 @@ int pl_cache_sys_GetTrackDetails(pl_core_MediaFileStruct *a_psData, int a_iIndex
     return (int)eResult;
 }
 
-int pl_cache_sys_SetRepeatRandom(struct sPlaybackOptions a_sPlaybackOpt)
+int pl_cache_sys_SetRepeatRandom(sPlaybackOptions a_sPlaybackOpt)
 {
     PRINT_ENTRY;
 
     g_sSourceData.m_oPlayBackOpt = a_sPlaybackOpt;
+    return (int)eTRUE;
+}
+
+int pl_cache_sys_GetRepeatRandom(sPlaybackOptions* a_sPlaybackOpt)
+{
+    PRINT_ENTRY;
+    a_sPlaybackOpt->m_eRepeat = g_sSourceData.m_oPlayBackOpt.m_eRepeat;
+    a_sPlaybackOpt->m_eShuffle = g_sSourceData.m_oPlayBackOpt.m_eShuffle;
     return (int)eTRUE;
 }
 

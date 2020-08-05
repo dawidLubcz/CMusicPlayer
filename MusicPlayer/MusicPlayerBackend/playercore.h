@@ -33,17 +33,16 @@ typedef struct
 }pl_core_ID3v1;
 
 #define PL_CORE_ID3v1_INITIALIZER {{0},{0},{0},{0},{0},{0},'\0'}
-#define PL_CORE_FILE_NAME_SIZE 512
 
 typedef struct
 {
     char m_pcFullName[PL_CORE_FILE_NAME_SIZE];
-    char m_pcName[PL_CORE_FILE_NAME_SIZE/2];
+    char m_pcName[PL_CORE_FILE_NAME_SIZE];
     eExtension m_eExtension;
     pl_core_ID3v1 m_sTrackInfo;
 }pl_core_MediaFileStruct;
 
-typedef void (*pl_core_listReadyFuncP)(uint64_t);
+typedef void (*pl_core_listReadyFuncP)(uint32_t);
 typedef void (*pl_core_playingTrackInfo)(pl_core_ID3v1);
 typedef struct
 {
@@ -61,7 +60,7 @@ void pl_core_next();
 void pl_core_prev();
 void pl_core_setTimePos(uint32_t a_u);
 void pl_core_setTrack(char* a_pcFileName);
-void pl_core_setTrackWithIndex(uint64_t a_u64Id);
+void pl_core_setTrackWithIndex(uint32_t a_u32Id);
 void pl_core_unload();
 void pl_core_volUp();
 void pl_core_volDown();
@@ -70,8 +69,10 @@ void pl_core_createPlayListInCurrDir();
 void pl_core_createMP3PlaylistInCurrDir();
 void pl_core_createPlaylistFromDir(char* a_pcFolderWithPath);
 void pl_core_createPlaylistFromDir_r(char *a_pcFolderWithPath);
-void pl_core_getPlaylistItems(pl_core_MediaFileStruct* a_pItemsArray, uint64_t a_u64MaxSize);
+void pl_core_getPlaylistItems(pl_core_MediaFileStruct* a_pItemsArray, uint32_t a_u64MaxSize);
 void pl_core_setRepeat(eRepeat a_eRepeat);
+
+eErrCode pl_core_restore_last_playback();
 
 void pl_core_cleanMemory();
 void pl_core_registerListener(pl_core_listenerInterface *a_psInterface);
@@ -106,8 +107,8 @@ typedef enum
 
 typedef union
 {
-    uint64_t u64Param;
-    int32_t i32Param;    
+    uint32_t u32Param;
+    int32_t i32Param;  
     char paBuffer[512];
 }uDataParams_t;
 

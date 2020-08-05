@@ -13,6 +13,8 @@
 #undef PRINT_PREFIX
 #define PRINT_PREFIX "MP:Browser: "
 
+#define NO_LOGS
+
 static char* g_aExtensionsTable[E_EXT_ALL + 1] =
 {
     ".mp3",//mp3
@@ -31,7 +33,7 @@ u_int64 pl_br_getFilesCountInDir(eExtension a_eExt, char* a_pcDirectory)
 
     if(a_pcDirectory != 0 && 0 < strlen(a_pcDirectory))
     {
-        PRINT_INF("getFilesCountInDir(), dir: %s", a_pcDirectory);
+        //PRINT_INF("getFilesCountInDir(), dir: %s", a_pcDirectory);
 
         DIR* pDIrectory = 0;
         struct dirent* psDirectoryContent = 0;
@@ -67,7 +69,7 @@ u_int64 pl_br_getFilesCountInDir(eExtension a_eExt, char* a_pcDirectory)
         PRINT_ERR("getFilesCountInDir(), directory path not valid");
     }
 
-    PRINT_INF("getFilesCountInDir(), found %u files", ui64Cntr);
+    //PRINT_INF("getFilesCountInDir(), found %u files", ui64Cntr);
 
     return ui64Cntr;
 }
@@ -85,7 +87,7 @@ eUSBErrorCode pl_br_getFilesInDir(pl_core_MediaFileStruct *a_psMediaFilesArray, 
     assert(0 != a_pcDirectory);
     assert(0 <  strlen(a_pcDirectory));
 
-    PRINT_INF("getFilesInDir(), dir: %s, size: %u", a_pcDirectory, a_pSize);
+    //PRINT_INF("getFilesInDir(), dir: %s, size: %u", a_pcDirectory, a_pSize);
 
     // clear output memory
     memset((pl_core_MediaFileStruct*)a_psMediaFilesArray,'\0',a_pSize * sizeof(pl_core_MediaFileStruct));
@@ -177,7 +179,7 @@ uint64_t pl_br_getFilesInDir_G(GArray *a_psMediaFilesArray, eExtension a_eExt, c
         if(0 == a_pcDirectory)break;
         if(0 == strlen(a_pcDirectory))break;
 
-        PRINT_INF("getFilesInDir_G(), dir: %s", a_pcDirectory);
+        //PRINT_INF("getFilesInDir_G(), dir: %s", a_pcDirectory);
 
         // check if array is empty
         if(0 < a_psMediaFilesArray->len)
@@ -404,49 +406,53 @@ pl_core_ID3v1 getID3v1Tag(const char* a_pcFileName)
     {
         if(0 == pFile)
         {
-            //PRINT_ERR("getID3Tag(), cannot open file, %s", a_pcFileName);
+            PRINT_ERR("getID3Tag(), cannot open file, %s", a_pcFileName);
             break;
         }
 
         if(fseek(pFile, -sizeof(pl_core_ID3v1), SEEK_END) == -1)
         {
-            //PRINT_ERR("getID3Tag(), fseek failed");
+            PRINT_ERR("getID3Tag(), fseek failed");
             break;
         }
 
         if (fread(&sResult, 1, sizeof(pl_core_ID3v1), pFile) != sizeof(pl_core_ID3v1))
         {
-            //PRINT_ERR("getID3Tag(), fread failed");
+            PRINT_ERR("getID3Tag(), fread failed");
             break;
         }
 
         if (memcmp(sResult.pcTag, "TAG", 3) == 0)
         {
-            PRINT_INF("+------------ Track info ------------+");
-            PRINT_INF("Title: %.30s", sResult.pcTitle);
-            PRINT_INF("Artist: %.30s", sResult.pcArtist);
-            PRINT_INF("Album: %.30s", sResult.pcAlbum);
-            PRINT_INF("Year: %.4s", sResult.pcYear);
+            //PRINT_INF("+------------ Track info ------------+");
+            //PRINT_INF("Title: %.30s", sResult.pcTitle);
+            //PRINT_INF("Artist: %.30s", sResult.pcArtist);
+            //PRINT_INF("Album: %.30s", sResult.pcAlbum);
+            //PRINT_INF("Year: %.4s", sResult.pcYear);
 
             if (sResult.pcComment[28] == '\0')
             {
-                PRINT_INF("Comment: %.28s", sResult.pcComment);
-                PRINT_INF("Track: %d", sResult.pcComment[29]);
+                //PRINT_INF("Comment: %.28s", sResult.pcComment);
+                //PRINT_INF("Track: %d", sResult.pcComment[29]);
             }
             else
             {
-                PRINT_INF("Comment: %.30s", sResult.pcComment);
+                //PRINT_INF("Comment: %.30s", sResult.pcComment);
             }
 
-            PRINT_INF("Genre: %d", sResult.ucGenre);
-            PRINT_INF("+----------- Track info end----------+");
+            //PRINT_INF("Genre: %d", sResult.ucGenre);
+            //PRINT_INF("+----------- Track info end----------+");
         }
         else
         {
-            //PRINT_ERR("getID3Tag(), read tags failed");
+            PRINT_ERR("getID3Tag(), read tags failed");
 
             // clear memory which was dirtied by fread and set to unknown
             memset(&sResult, '\0', sizeof(pl_core_ID3v1));
+            strcpy(sResult.pcTitle, "Unknown");
+            strcpy(sResult.pcArtist, "Unknown");
+            strcpy(sResult.pcAlbum, "Unknown");
+            strcpy(sResult.pcYear, "Unknown");
 
             break;
         }
@@ -542,11 +548,11 @@ static void getID3v2Tag(char* a_pcFileName)
 
             if(0 == strcmp("TLEN",sFrame.caFrameID))
             {
-                //PRINT_INF("getID3v2Tag(), found TLEN");
+                ////PRINT_INF("getID3v2Tag(), found TLEN");
             }
             else if(strlen(sFrame.caFrameID)>2)
             {
-                //PRINT_INF("getID3v2Tag(), found HEADER: %s", sFrame.caFrameID);
+                ////PRINT_INF("getID3v2Tag(), found HEADER: %s", sFrame.caFrameID);
             }
             u32BytesLeft -= u32FrameSize + 10;
         }

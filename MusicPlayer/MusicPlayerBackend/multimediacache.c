@@ -1,6 +1,7 @@
 #include "multimediacache.h"
 #include "multimediacacheusb.h"
 #include "multimediacachefilesys.h"
+#include "platform.h"
 
 #include <assert.h>
 
@@ -14,7 +15,7 @@
     }\
 
 static eSourceID g_eActiveSource = E_ID_FILESYS;
-static struct sSourceInterface g_aSourcesArray[E_ID_MAX] = {0};
+static sSourceInterface g_aSourcesArray[E_ID_MAX] = {0};
 static eBool g_fInitialized = eFALSE;
 
 void pl_cache_init()
@@ -52,17 +53,28 @@ void pl_cache_destroyCurrentSource()
     g_aSourcesArray[g_eActiveSource].m_pfDestroy();
 }
 
-struct sPlaylist pl_cache_getPlaylistCurrSource(void)
+sPlaylist* pl_cache_getPlaylistCurrSource(void)
 {
     CACHE_ASSERT;
-    struct sPlaylist sData = g_aSourcesArray[g_eActiveSource].m_pfGetPlaylist();
-    return sData;
+    sPlaylist* psData = g_aSourcesArray[g_eActiveSource].m_pfGetPlaylist();
+    return psData;
 }
 
-int pl_cache_newPlaylistFromDirRec(char * a_pcDir)
+eBool saveLastPlayedInfo(char* a_pcDir)
+{
+    sLastPlayedInfo lastPlayedInfo = {0};
+    lastPlayedInfo.sourceID = g_eActiveSource;
+    g_aSourcesArray[g_eActiveSource].m_pfGetRepeatRandom(&lastPlayedInfo.playbackOptions);
+    strncpy(lastPlayedInfo.playbackPath, a_pcDir, PL_CORE_FILE_NAME_SIZE);
+    lastPlayedInfo.playlist = g_aSourcesArray[g_eActiveSource].m_pfGetPlaylist();
+    saveLastPlayedInfoToDisc(&lastPlayedInfo);
+}
+
+int pl_cache_newPlaylistFromDirRec(char* a_pcDir)
 {
     CACHE_ASSERT;
     int iRetCode = g_aSourcesArray[g_eActiveSource].m_pfNewPlaylistFromDirRec(a_pcDir);
+    saveLastPlayedInfo(a_pcDir);
     return iRetCode;
 }
 
@@ -87,7 +99,7 @@ int pl_cache_getTrackDetails(pl_core_MediaFileStruct * a_psData, int a_iIndex)
     return iRetCode;
 }
 
-int pl_cache_setRepeatRandom(struct sPlaybackOptions a_sPlOpts)
+int pl_cache_setRepeatRandom(sPlaybackOptions a_sPlOpts)
 {
     CACHE_ASSERT;
     int iRetCode = g_aSourcesArray[g_eActiveSource].m_pfSetRepeatRandom(a_sPlOpts);

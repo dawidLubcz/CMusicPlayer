@@ -166,9 +166,22 @@ void gst_pl_play()
     if(FALSE != g_eInitialized && FALSE != g_eTrackWasSet)
     {
         gst_element_set_state (g_oGstCurrentAudioData.m_pPlaybin, GST_STATE_PLAYING);
+        GstState state = GST_STATE_NULL;
+        GstStateChangeReturn change = 
+            gst_element_get_state (g_oGstCurrentAudioData.m_pPlaybin, &state, NULL, GST_CLOCK_TIME_NONE);
 
-        PRINT_INF("Playback is playing");
+        PRINT_INF("Play, state [%d], change [%d]",
+            state, change);
     }
+    else
+    {
+        PRINT_ERR("play failed, init[%d] trackset[%d]",
+            g_eInitialized, g_eTrackWasSet);
+        if(g_eInitialized)
+        {
+            // TODO - back to player core to do next or set track 0
+        }
+    }    
 }
 
 void gst_pl_stop()
@@ -213,7 +226,7 @@ void gst_pl_setTimePos(uint32_t a_u32TimePos)
     }
     else
     {
-        PRINT_ERR("setTimePos() not initialized");
+        PRINT_ERR("setTimePos() failed, init[%d] trackset[%d] playbin[%x]", g_eInitialized, g_eTrackWasSet, g_oGstCurrentAudioData.m_pPlaybin);
     }
 }
 

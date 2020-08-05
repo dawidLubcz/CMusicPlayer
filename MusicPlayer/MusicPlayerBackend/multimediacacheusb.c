@@ -6,11 +6,11 @@
 #undef PRINT_PREFIX
 #define PRINT_PREFIX "MP:cacheUSB: "
 
-static struct sSourceInfo g_sSourceData = {0};
+sSourceInfo g_sSourceData = {0};
 
-struct sPlaylist pl_cache_usb_GetPlaylist()
+sPlaylist* pl_cache_usb_GetPlaylist()
 {
-    return g_sSourceData.m_oPlaylist;
+    return &g_sSourceData.m_oPlaylist;
 }
 
 static eBool clearPlaylist()
@@ -35,7 +35,7 @@ static eBool clearPlaylist()
     return eResult;
 }
 
-int pl_cache_usb_NewPlFromDirRec(char * a_pcDir)
+int pl_cache_usb_NewPlFromDirRec(char *a_pcDir)
 {
     PRINT_ENTRY;
 
@@ -130,7 +130,7 @@ int pl_cache_usb_GetTrackDetails(pl_core_MediaFileStruct *a_psData, int a_iIndex
 
     eBool eResult = eFALSE;
 
-    if(0 != a_psData)
+    if(0 != a_psData && eFALSE != g_sSourceData.m_eHasPlaylist)
     {
         pl_core_MediaFileStruct sData = g_array_index(g_sSourceData.m_oPlaylist.m_psCurrentTrackListGArray, pl_core_MediaFileStruct, a_iIndex);
         memcpy(a_psData, &sData, sizeof(pl_core_MediaFileStruct));
@@ -143,23 +143,32 @@ int pl_cache_usb_GetTrackDetails(pl_core_MediaFileStruct *a_psData, int a_iIndex
     return (int)eResult;
 }
 
-int pl_cache_usb_SetRepeatRandom(struct sPlaybackOptions a_sPlaybackOpt)
+int pl_cache_usb_SetRepeatRandom(sPlaybackOptions a_sPlaybackOpt)
 {
     g_sSourceData.m_oPlayBackOpt = a_sPlaybackOpt;
     return (int)eTRUE;
 }
 
-struct sSourceInterface pl_cache_usb_createUsb()
+int pl_cache_usb_GetRepeatRandom(sPlaybackOptions* a_sPlaybackOpt)
+{
+    PRINT_ENTRY;
+    a_sPlaybackOpt->m_eRepeat = g_sSourceData.m_oPlayBackOpt.m_eRepeat;
+    a_sPlaybackOpt->m_eShuffle = g_sSourceData.m_oPlayBackOpt.m_eShuffle;
+    return (int)eTRUE;
+}
+
+sSourceInterface pl_cache_usb_createUsb()
 {
     PRINT_ENTRY;
 
-    struct sSourceInterface sInterface = {.m_pfDestroy = pl_cache_usb_destroy,
+    sSourceInterface sInterface = {.m_pfDestroy = pl_cache_usb_destroy,
                                           .m_pfGetPlaylist = pl_cache_usb_GetPlaylist,
                                           .m_pfNewPlaylistFromDirRec = pl_cache_usb_NewPlFromDirRec,
                                           .m_pfNewPlaylistFromDir = pl_cache_usb_NewPlFromDir,
                                           .m_pfGetTrackWithPath = pl_cache_usb_GetTrackWithPath,
                                           .m_pfGetTrackDetails = pl_cache_usb_GetTrackDetails,
                                           .m_pfSetRepeatRandom = pl_cache_usb_SetRepeatRandom,
+                                          .m_pfGetRepeatRandom = pl_cache_usb_GetRepeatRandom,
                                           .m_pfSetPlIndex = pl_cache_usb_SetPlIndex,
                                           .m_pfGetNextTrackPath = pl_cache_usb_GetNextTrackPath,
                                           .m_pfGetPrevTrackPath = pl_cache_usb_GetPrevTrackPath,
