@@ -1,5 +1,5 @@
-#include "SDL/SDL.h"
-#include <SDL/SDL_mixer.h>
+#include "SDL.h"
+#include <SDL_mixer.h>
 #include "mediafilesbrowser.h"
 #include "usblistener.h"
 #include "playercore.h"
