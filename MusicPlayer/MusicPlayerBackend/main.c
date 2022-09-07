@@ -167,14 +167,5 @@ int main()
 
     pl_core_deinitialize();
 
-    ///////////////////// USB //////////////////////
-
-    //usbListenerInit();
-    //usbListenerRun();
-
-
-    //Quit SDL
-    //SDL_Quit();
-
     return 0;
 }
