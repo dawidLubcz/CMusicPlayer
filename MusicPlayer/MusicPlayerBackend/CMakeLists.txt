@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(MusicPlayerBackend VERSION 0.1)
+project(MusicPlayerCore VERSION 0.1)
 
 # sudo apt-get install pkg-config
 # sudo apt-get install libglib2.0
@@ -18,8 +18,8 @@ find_package(Threads REQUIRED)
 
 include_directories(${GLIB_INCLUDE_DIRS} ${GSTREAMER_INCLUDE_DIRS} ${SDL2_INCLUDE_DIRS} ${SDL_MIXER_INCLUDE_DIRS})
 
-add_executable(MusicPlayerBackend main.c)
-target_sources(MusicPlayerBackend PRIVATE
+add_executable(MusicPlayerCore main.c)
+target_sources(MusicPlayerCore PRIVATE
     gstplayer.c
     mediafilesbrowser.c
     multimediacache.c
@@ -29,7 +29,7 @@ target_sources(MusicPlayerBackend PRIVATE
     sldplayer.c
     usblistener.c
 )
-target_link_libraries(MusicPlayerBackend PUBLIC
+target_link_libraries(MusicPlayerCore PUBLIC
                       ${GLIB_LIBRARIES}
                       ${GSTREAMER_LIBRARIES}
                       ${SDL2_LIBRARIES}
