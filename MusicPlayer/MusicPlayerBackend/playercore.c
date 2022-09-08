@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <sys/stat.h>
 
 #include <pthread.h>
 #include <unistd.h>
@@ -525,7 +526,13 @@ static void handleUSBConnected(const char* a_psNewPartition)
     memset(g_pcUsbMountDir, '\0', PL_CORE_FILE_NAME_SIZE);
     getcwd(g_pcUsbMountDir, PL_CORE_FILE_NAME_SIZE);
     strcat(g_pcUsbMountDir, "/");
-    strcat(g_pcUsbMountDir,pcMountDir);
+    strcat(g_pcUsbMountDir, pcMountDir);
+
+    struct stat st = {0};
+    if (stat(g_pcUsbMountDir, &st) == -1)
+    {
+        mkdir(g_pcUsbMountDir, 0700);
+    }
 
     if(usb_mount(a_psNewPartition, g_pcUsbMountDir))
     {
