@@ -8,7 +8,7 @@ mkdir build
 cd build
 bash ../install.sh
 cmake ..
-cmake --build ..
+cmake --build .
 ```
 Note:
 In case of problems with SDL2 like - redefinition of some SDL stuff, make sure that only libsdl-mixer1.2-dev is installed from SDL1
