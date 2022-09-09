@@ -1,7 +1,7 @@
 #include "playerfront.h"
 
 // TODO: Create common space for files like queue file or common headers.
-static const char* g_pcMsqQueueFile = "../MusicPlayerCore/msgQueueFile";
+static const char* g_pcMsqQueueFile = "../../MusicPlayerCore/msgQueueFile";
 static char g_cProjectID = 'D' | 'L';
 static int32_t  g_i32MsgQueueID = 0;
 
@@ -20,6 +20,7 @@ int frontInitialize()
         }
         else
         {
+            printf("appCoreInitQueue(): sys queue created, id=%d", g_i32MsgQueueID);
             i32Result = 0;
         }
     }
@@ -41,7 +42,10 @@ int sendMessage(sMessage_t* a_sParam)
             perror("msgsnd");
         }
         else
+        {
+            printf("sendMessage(): msg sent to, id=%d", g_i32MsgQueueID);
             _fRetval = 1;
+        }
     }
     return _fRetval;
 }
