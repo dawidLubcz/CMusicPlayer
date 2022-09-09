@@ -13,8 +13,9 @@ cmake --build .
 ## Usage
 ### How to run
 ```
-./MusicPlayerFront
+sudo ./MusicPlayerFront
 ```
+`sudo` is necessary to be able to access message queue file (assuming that MusicPlayerCore was started with sudo)
 
 ### How to use
 Follow command line options (should be logged), but for full posible options check ../MediaPlayerCore/main.c
