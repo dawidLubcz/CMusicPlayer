@@ -153,6 +153,8 @@ eErrCode pl_core_initialize()
     pl_core_runPlayerQueue();
     pl_core_runUSBListener();
     pl_cache_init();
+    pl_core_initIpcInterface();
+    pl_core_runIpcThread();
 
     return eResult;
 }
@@ -176,6 +178,8 @@ eErrCode pl_core_deinitialize()
         g_list_free(g_psListenersList);
         g_psListenersList = 0;
     }
+    pl_core_stopIpcThread();
+    pl_core_deinitIpcInterface();
 
     g_u8Initialized = FALSE;
 
@@ -190,13 +194,13 @@ eErrCode pl_core_initIpcInterface()
 
 eErrCode pl_core_deinitIpcInterface()
 {
-    PRINT_INF("deinit()");
+    PRINT_INF("pl_core_deinitIpcInterface:deinit()");
 
     eErrCode eResult = ERR_OK;
     if(-1 == msgctl(g_i32MsgQueueID, IPC_RMID, NULL))
     {
         eResult = ERR_NOK;
-        PRINT_ERR("deinit(), msgctl FAILED");
+        PRINT_ERR("pl_core_deinitIpcInterface:deinit(), msgctl FAILED");
         perror("msgctl");
     }
     return eResult;
@@ -204,7 +208,7 @@ eErrCode pl_core_deinitIpcInterface()
 
 void pl_core_runIpcThread()
 {
-    PRINT_INF("start()");
+    PRINT_INF("pl_core_runIpcThread:start()");
 
     if(FALSE != g_u8Initialized)
     {
@@ -215,13 +219,13 @@ void pl_core_runIpcThread()
                                      );
         if(iRetVal)
         {
-            PRINT_ERR("appCorePlayerThreadRun(), pthread_create FAILED");
+            PRINT_ERR("pl_core_runIpcThread(), pthread_create FAILED");
             perror("thread_create");
         }
     }
     else
     {
-        PRINT_ERR("appCoreIPCPlayerThreadRun(), NOT INITIALIZED");
+        PRINT_ERR("pl_core_runIpcThread(), NOT INITIALIZED");
     }
 
     return;
@@ -292,7 +296,7 @@ eErrCode appCoreInitQueue()
 {
     key_t u32MsgQueueKey = -1;
     eErrCode i32Result = ERR_NOK;
-    const char* pcMsqQueueFile = "msgQueueFile";
+    const char* pcMsqQueueFile = "../msgQueueFile";
     char cProjectID = 'D' | 'L';
 
     u32MsgQueueKey = ftok(pcMsqQueueFile, cProjectID);
@@ -305,6 +309,7 @@ eErrCode appCoreInitQueue()
         }
         else
         {
+            PRINT_INF("appCoreInitQueue(): sys queue created, id=%d", g_i32MsgQueueID);
             i32Result = ERR_OK;
         }
     }
@@ -313,13 +318,13 @@ eErrCode appCoreInitQueue()
         PRINT_ERR("init(), ftok FAILED");
         perror("ftok");
     }
+    PRINT_INF("appCoreInitQueue(): done, result=%d", i32Result);
     return i32Result;
-
 }
 
 void *threadQueue(void *arg)
 {
-    PRINT_INF("threadRoutine(): run PT");
+    PRINT_INF("threadQueue(): run PT");
 
     g_u8IsQueueRunning = TRUE;
     while(FALSE != g_u8IsQueueRunning)
@@ -351,22 +356,20 @@ void *threadQueue(void *arg)
     g_u8IsQueueRunning = FALSE;
 
     PRINT_INF("threadQueue(): stop");
-
     return arg;
 }
 
 void *threadIPC(void *arg)
 {
-    PRINT_INF("threadRoutine(): run PT");
+    PRINT_INF("threadIPC(): run PT");
 
     g_u8IsIPCRunning = TRUE;
-
     while(FALSE != g_u8IsIPCRunning)
     {
         sMessage_t sMsg;
         if(-1 == msgrcv(g_i32MsgQueueID, &sMsg, sizeof (sMsg), 0, 0))
         {
-            PRINT_ERR("threadRoutine(), msgrcv FAILED");
+            PRINT_ERR("threadIPC(), msgrcv FAILED");
             perror("msgrcv");
         }
         else
@@ -374,22 +377,44 @@ void *threadIPC(void *arg)
             if(E_PLAY <= sMsg.mmsg.eCommand &&
                E_MAX  >  sMsg.mmsg.eCommand   )
             {
+                PRINT_INF("threadIPC(): msg received, command: %d", sMsg.mmsg.eCommand);
                 g_apAPIHandlersArray[sMsg.mmsg.eCommand](sMsg.mmsg.uParam);
             }
             else
             {
-                PRINT_ERR("threadRoutine(), no handler available for: %d", sMsg.mmsg.eCommand);
+                PRINT_ERR("threadIPC(), no handler available for: %d", sMsg.mmsg.eCommand);
             }
-
+        }
+        if(QUEUE_EXIT == sMsg.mmsg.uParam.i32Param)
+        {
+            break;
         }
     }
-    PRINT_INF("threadRoutine(): stop");
+    g_u8IsIPCRunning = FALSE;
 
+    PRINT_INF("threadIPC(): stop");
     return arg;
 }
 
 void pl_core_stopIpcThread()
 {
+    if (g_u8IsIPCRunning)
+    {
+        static sData_t sData;
+        sData.eCommand = E_QUEUE_STOP;
+        sData.uParam.i32Param = QUEUE_EXIT;
+        static sMessage_t sMsg;
+        sMsg.mmsg = sData;
+        sMsg.mtype = 1;
+        if(-1 == msgsnd(g_i32MsgQueueID, &sMsg, sizeof(sMessage_t),0))
+        {
+            perror("msgsnd");
+        }
+        else
+        {
+            PRINT_INF("sendMessage(): msg sent to, id=%d", g_i32MsgQueueID);
+        }
+    }
     g_u8IsIPCRunning = FALSE;
 }
 
