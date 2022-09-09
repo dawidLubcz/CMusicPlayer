@@ -40,55 +40,55 @@ int main(void)
         {
             case 1:
             {
-                sMsg.mmsg.E_PLAYER_COMMAND_t = E_PLAY;
+                sMsg.mmsg.eCommand = E_PLAY;
                 sMsg.mmsg.uParam.i32Param = 0;
             }break;
 
             case 2:
             {
-                sMsg.mmsg.E_PLAYER_COMMAND_t = E_STOP;
+                sMsg.mmsg.eCommand = E_STOP;
                 sMsg.mmsg.uParam.i32Param = 0;
             }break;
 
             case 3:
             {
-                sMsg.mmsg.E_PLAYER_COMMAND_t = E_PAUSE;
+                sMsg.mmsg.eCommand = E_PAUSE;
                 sMsg.mmsg.uParam.i32Param = 0;
             }break;
 
             case 4:
             {
-                sMsg.mmsg.E_PLAYER_COMMAND_t = E_NEXT;
+                sMsg.mmsg.eCommand = E_NEXT;
                 sMsg.mmsg.uParam.i32Param = 0;
             }break;
 
             case 5:
             {
-                sMsg.mmsg.E_PLAYER_COMMAND_t = E_PREV;
+                sMsg.mmsg.eCommand = E_PREV;
                 sMsg.mmsg.uParam.i32Param = 0;
             }break;
 
             case 6:
             {
-                sMsg.mmsg.E_PLAYER_COMMAND_t = E_SET_TRACK;
+                sMsg.mmsg.eCommand = E_SET_TRACK;
                 strcpy(sMsg.mmsg.uParam.paBuffer, "Unknown");
             }break;
 
             case 7:
             {
-                sMsg.mmsg.E_PLAYER_COMMAND_t = E_UNLOAD;
+                sMsg.mmsg.eCommand = E_UNLOAD;
                 sMsg.mmsg.uParam.i32Param = 0;
             }break;
 
             case 8:
             {
-                sMsg.mmsg.E_PLAYER_COMMAND_t = E_VOL_UP;
+                sMsg.mmsg.eCommand = E_VOL_UP;
                 sMsg.mmsg.uParam.i32Param = 0;
             }break;
 
             case 9:
             {
-                sMsg.mmsg.E_PLAYER_COMMAND_t = E_VOL_DOWN;
+                sMsg.mmsg.eCommand = E_VOL_DOWN;
                 sMsg.mmsg.uParam.i32Param = 0;
             }break;
 
@@ -97,7 +97,7 @@ int main(void)
                 int vol = 0;
                 printf("Get Volume, 0-128:\n");
                 scanf("%d",&vol);
-                sMsg.mmsg.E_PLAYER_COMMAND_t = E_SET_VOL;
+                sMsg.mmsg.eCommand = E_SET_VOL;
                 sMsg.mmsg.uParam.i32Param = vol;
             }break;
 
@@ -107,7 +107,7 @@ int main(void)
 
         }
         sendMessage(&sMsg);
-    } while(iOption != (-1));
+    } while(iOption > 0 && iOption <= 10);
 
     return 0;
 }

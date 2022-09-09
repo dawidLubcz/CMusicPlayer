@@ -1,7 +1,7 @@
 #include "playerfront.h"
 
-
-static const char* g_pcMsqQueueFile = "msgQueueFile";
+// TODO: Create common space for files like queue file or common headers.
+static const char* g_pcMsqQueueFile = "../MusicPlayerCore/msgQueueFile";
 static char g_cProjectID = 'D' | 'L';
 static int32_t  g_i32MsgQueueID = 0;
 
